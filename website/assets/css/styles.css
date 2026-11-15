@@ -176,13 +176,13 @@ button { font: inherit; color: inherit; }
 .ship img { width: 32px; height: auto; position: relative; z-index: 1; transition: transform .25s; }
 .brand:hover .ship img { transform: scale(1.06); }
 /* fireball grows from under the upright cap (see launch pose) */
-.flame { position: absolute; z-index: 0; left: 50%; top: 52%; width: 20px; transform-origin: 50% 0; transform: translateX(-50%) scale(0); opacity: 0; }
+.flame { position: absolute; z-index: 0; left: 43.5%; top: 64%; width: 20px; transform-origin: 50% 0; transform: translateX(-50%) scale(0); opacity: 0; }
 .flame svg { width: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 6px rgba(245,120,40,.55)); }
 .flame .f1 { fill: #ef5a2f; }
 .flame .f2 { fill: #f5b942; }
 .flame .f3 { fill: #fbf7a0; }
 .flame .f4 { fill: #fff; }
-.smoke { position: absolute; left: 50%; bottom: -16px; width: 0; height: 0; z-index: 0; }
+.smoke { position: absolute; left: 43.5%; bottom: -16px; width: 0; height: 0; z-index: 0; }
 .smoke i { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink); left: -6px; top: -6px; transform: scale(0); opacity: 0; }
 
 .brand.launch .ship   { animation: rocket-shake 1.9s both; }
