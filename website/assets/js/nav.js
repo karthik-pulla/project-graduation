@@ -13,7 +13,7 @@
   const ROCKET = `<span class="logo-pad" aria-hidden="true">
       <span class="smoke"><i></i><i></i><i></i><i></i></span>
       <span class="rocket">
-        <span class="flame"><svg viewBox="0 0 60 80"><path class="f1" d="M30 2C46 2 58 14 58 30c0 12-6 20-12 26 2-6 1-10-2-12 0 10-6 18-10 34-4-8-12-16-14-22-2 4-4 6-8 6 2-4 2-8-2-12C4 44 2 38 2 30 2 14 14 2 30 2z"/><path class="f2" d="M30 10c12 0 20 10 19 21-1 9-7 15-13 21 1-6 0-9-3-11 0 7-3 13-5 21-3-7-6-12-8-17-7-5-9-11-9-16 0-11 8-19 19-19z"/><path class="f3" d="M30 16c8 0 13 7 12 14-1 6-6 10-10 14 0-5-1-7-3-9-3 3-6 2-9-2-3-5-2-11 2-14 2-2 5-3 8-3z"/><circle class="f4" cx="30" cy="22" r="5"/></svg></span>
+        <span class="flame"><svg viewBox="0 0 60 80"><path class="f1" d="M30 2C46 2 58 14 58 30C58 42 52 50 46 56C47 50 46 47 43 45C42 56 36 64 30 78C24 64 18 56 17 45C14 47 13 50 14 56C8 50 2 42 2 30C2 14 14 2 30 2Z"/><path class="f2" d="M30 10C41 10 49 19 49 30C49 39 44 45 38 51C38 47 37 45 35 44C35 52 32 58 30 66C28 58 25 52 25 44C23 45 22 47 22 51C16 45 11 39 11 30C11 19 19 10 30 10Z"/><path class="f3" d="M30 16C37 16 42 22 42 29C42 35 37 40 30 46C23 40 18 35 18 29C18 22 23 16 30 16Z"/><circle class="f4" cx="30" cy="23" r="5"/></svg></span>
         <span class="ship"><img src="assets/mark-white.png" alt=""></span>
       </span>
     </span>`;
