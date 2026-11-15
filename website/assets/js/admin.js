@@ -12,12 +12,14 @@
   };
   const CATS = { hackathon: "Hackathon", volunteer: "Volunteer", fundraiser: "Fundraiser", community: "Community" };
   const STATUS = { new: "New", contacted: "Contacted", confirmed: "Confirmed", declined: "Declined" };
+  const VSTATUS = { pending: "Pending", approved: "Approved", inactive: "Inactive" };
+  const ISTATUS = { new: "New", reviewing: "Reviewing", approved: "Approved", passed: "Passed" };
   const EXTRAS = { team: "Team name", experience: "Experience level", shirt: "T-shirt size", shift: "Shift picker", guests: "Group size" };
 
   let TOKEN = null;
   try { TOKEN = sessionStorage.getItem("pg-admin"); } catch {}
   let DB = null;
-  const ui = { sponsorFilter: "all", regEvent: "all", regQuery: "" };
+  const ui = { sponsorFilter: "all", regEvent: "all", regQuery: "", volFilter: "all", ideaFilter: "all" };
 
   /* ---------------- api ---------------- */
   async function api(method, path, body) {
@@ -69,13 +71,15 @@
   }
 
   /* ---------------- routing ---------------- */
-  const VIEWS = { overview, fundraising, events, registrations, sponsors };
+  const VIEWS = { overview, fundraising, events, registrations, sponsors, volunteers, ideas };
   function route() {
     const tab = (location.hash.slice(1).split("?")[0]) || "overview";
     const view = VIEWS[tab] || overview;
     $$("[data-tab]").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === tab ? "page" : "false"));
-    const newCount = DB.sponsors.filter((s) => s.status === "new").length;
-    const pill = $("[data-new-count]"); pill.hidden = !newCount; pill.textContent = newCount;
+    const setPill = (sel, n) => { const p = $(sel); if (p) { p.hidden = !n; p.textContent = n; } };
+    setPill("[data-new-count]", DB.sponsors.filter((s) => s.status === "new").length);
+    setPill("[data-vol-count]", DB.volunteers.filter((v) => v.status === "pending").length);
+    setPill("[data-idea-count]", DB.ideas.filter((x) => x.status === "new").length);
     // fresh pane element each render so per-view listeners never stack up
     const old = $("[data-pane]"), pane = old.cloneNode(false);
     pane.innerHTML = view();
@@ -91,7 +95,7 @@
   });
 
   const head = (eyebrow, title, actions = "") => `<header class="pane-head"><div><p class="eyebrow">// ${eyebrow}</p><h1>${title}</h1></div><div class="pane-actions">${actions}</div></header>`;
-  const regCount = (id) => DB.registrations.filter((r) => r.eventId === id).length;
+  const regCount = (id) => DB.registrations.filter((r) => r.eventId === id).length + DB.signups.filter((x) => x.eventId === id).length;
   const taken = (e) => (e.registered || 0) + regCount(e.id);
 
   /* ---------------- overview ---------------- */
@@ -99,7 +103,12 @@
     const c = DB.config, pct = Math.min(100, (c.raised / c.goal) * 100);
     const upcoming = DB.events.filter((e) => new Date(e.end) > new Date()).sort((a, b) => new Date(a.start) - new Date(b.start));
     const newS = DB.sponsors.filter((s) => s.status === "new");
+    const pendV = DB.volunteers.filter((v) => v.status === "pending"), newI = DB.ideas.filter((x) => x.status === "new");
+    const vname = (id) => { const v = DB.volunteers.find((x) => x.id === id); return v ? `${esc(v.first)} ${esc(v.last)}` : "A volunteer"; };
     const activity = [
+      ...DB.volunteers.map((v) => ({ at: v.at, html: `<b>${esc(v.first)} ${esc(v.last)}</b> registered to volunteer` })),
+      ...DB.signups.map((x) => ({ at: x.at, html: `<b>${vname(x.volunteerId)}</b> took a shift: ${esc(DB.events.find((e) => e.id === x.eventId)?.title || "")} (${esc(x.shift)})` })),
+      ...DB.ideas.map((x) => ({ at: x.at, html: `<b>${esc(x.first)} ${esc(x.last)}</b> pitched “${esc(x.eventName || "an event")}”` })),
       ...DB.registrations.map((r) => ({ at: r.at, html: `<b>${esc(r.first)} ${esc(r.last)}</b> registered for ${esc(DB.events.find((e) => e.id === r.eventId)?.title || "an event")}${r.waitlist ? " (waitlist)" : ""}` })),
       ...DB.sponsors.map((s) => ({ at: s.at, html: `<b>${esc(s.org || s.first)}</b> applied to sponsor${s.tier ? ` · ${esc(s.tier)}` : ""}` })),
     ].sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 8);
@@ -109,10 +118,12 @@
         <a class="kpi" href="#events"><span>Upcoming events</span><b>${upcoming.length}</b><small>next: ${upcoming[0] ? esc(upcoming[0].title) : "none scheduled"}</small></a>
         <a class="kpi" href="#registrations"><span>Online sign-ups</span><b>${DB.registrations.length}</b><small>across ${DB.events.length} events</small></a>
         <a class="kpi ${newS.length ? "hot" : ""}" href="#sponsors"><span>New sponsor apps</span><b>${newS.length}</b><small>${DB.sponsors.length} total · ${DB.sponsors.filter((s) => s.status === "confirmed").length} confirmed</small></a>
+        <a class="kpi ${pendV.length ? "hot" : ""}" href="#volunteers"><span>Volunteers to approve</span><b>${pendV.length}</b><small>${DB.volunteers.filter((v) => v.status === "approved").length} approved · ${DB.signups.length} shifts booked</small></a>
+        <a class="kpi ${newI.length ? "hot" : ""}" href="#ideas"><span>New event ideas</span><b>${newI.length}</b><small>${DB.ideas.length} pitched in total</small></a>
       </div>
       <div class="two-col">
         <section class="card"><h2>Recent activity</h2>
-          ${activity.length ? `<ul class="activity">${activity.map((a) => `<li><span>${a.html}</span><time>${ago(a.at)}</time></li>`).join("")}</ul>` : `<p class="empty-note">Nothing yet. Sign-ups and sponsor applications show up here.</p>`}
+          ${activity.length ? `<ul class="activity">${activity.map((a) => `<li><span>${a.html}</span><time>${ago(a.at)}</time></li>`).join("")}</ul>` : `<p class="empty-note">Nothing yet. Sign-ups, volunteers, sponsors, and pitches show up here.</p>`}
         </section>
         <section class="card"><h2>Coming up</h2>
           ${upcoming.slice(0, 5).map((e) => `<div class="up-row"><div class="mini-cal"><b>${new Date(e.start).getDate()}</b><span>${new Date(e.start).toLocaleDateString("en-US", { month: "short" })}</span></div><div><b>${esc(e.title)}</b><small>${taken(e)} / ${e.capacity} signed up</small></div></div>`).join("") || `<p class="empty-note">No upcoming events.</p>`}
@@ -172,9 +183,9 @@
       </section>`;
   }
 
-  function eventForm(e) {
+  function eventForm(e, prefill) {
     const isNew = !e;
-    e = e || { title: "", category: "fundraiser", theme: "light", tag: "New", start: "", end: "", location: "", price: "Free", capacity: 50, registered: 0, blurb: "", extra: [], shifts: [] };
+    e = e || { title: "", category: "fundraiser", theme: "light", tag: "New", start: "", end: "", location: "", price: "Free", capacity: 50, registered: 0, blurb: "", extra: [], shifts: [], ...(prefill || {}) };
     const d = $("[data-drawer]");
     d.innerHTML = `<form class="drawer-body" data-event-form>
       <header><p class="eyebrow">// ${isNew ? "new event" : "edit event"}</p><h2 id="drawer-title">${isNew ? "Add an event" : esc(e.title)}</h2>
@@ -197,13 +208,14 @@
       <label class="field"><span>Tag on card</span><input name="tag" maxlength="24" value="${esc(e.tag)}" placeholder="New, Featured, Big night…"></label>
       <label class="field"><span>Description</span><textarea name="blurb" rows="3" maxlength="400">${esc(e.blurb)}</textarea></label>
       <fieldset class="field"><legend>Extra sign-up questions</legend><div class="pills">${Object.entries(EXTRAS).map(([k, v]) => `<label><input type="checkbox" name="extra" value="${k}" ${e.extra.includes(k) ? "checked" : ""}><span>${v}</span></label>`).join("")}</div></fieldset>
-      <label class="field" data-shifts ${e.extra.includes("shift") ? "" : "hidden"}><span>Shifts (one per line)</span><textarea name="shifts" rows="3" placeholder="10:00 – 12:00">${esc(e.shifts.join("\n"))}</textarea></label>
+      <label class="field" data-shifts ${e.extra.includes("shift") || e.category === "volunteer" ? "" : "hidden"}><span>Shifts (one per line)</span><textarea name="shifts" rows="3" placeholder="10:00 – 12:00">${esc(e.shifts.join("\n"))}</textarea></label>
       <p class="login-error" role="alert" data-form-error></p>
       <footer><button class="btn btn-maroon" type="submit">${isNew ? "Create event" : "Save changes"}</button><button type="button" class="btn btn-ghost" data-close-drawer>Cancel</button></footer>
     </form>`;
     d.showModal();
     const f = $("[data-event-form]", d);
-    f.addEventListener("change", (ev) => { if (ev.target.value === "shift") $("[data-shifts]", d).hidden = !ev.target.checked; });
+    const syncShifts = () => { $("[data-shifts]", d).hidden = !(f.category.value === "volunteer" || f.querySelector('[value="shift"]').checked); };
+    f.addEventListener("change", syncShifts);
     f.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const fd = new FormData(f);
@@ -276,8 +288,150 @@
         </article>`).join("") || `<section class="card empty-card"><div data-sticker="badge" data-still></div><p>${all.length ? "No sponsors with this status." : "No sponsor applications yet. Share the sign-up form to get the first one."}</p></section>`}</div>`;
   }
 
+
+  /* ---------------- volunteers ---------------- */
+  function volunteers() {
+    const all = DB.volunteers.slice().sort((a, b) => (a.status === "pending" ? -1 : 0) - (b.status === "pending" ? -1 : 0) || new Date(b.at) - new Date(a.at));
+    const rows = all.filter((v) => ui.volFilter === "all" || v.status === ui.volFilter);
+    const count = (st) => all.filter((v) => v.status === st).length;
+    const shiftsOf = (vid) => DB.signups.filter((x) => x.volunteerId === vid).map((x) => ({ ...x, ev: DB.events.find((e) => e.id === x.eventId) })).filter((x) => x.ev).sort((a, b) => new Date(a.ev.start) - new Date(b.ev.start));
+    return head("volunteers", "Volunteers", `<a class="btn btn-ghost" href="volunteer.html" target="_blank" rel="noopener">Open sign-up form ↗</a><button class="btn btn-ghost" data-export-vol ${all.length ? "" : "disabled"}>Export CSV</button>`) + `
+      <div class="toolbar"><div class="filters" role="group" aria-label="Filter by status">
+        <button class="chip" data-vf="all" aria-pressed="${ui.volFilter === "all"}">All · ${all.length}</button>
+        ${Object.entries(VSTATUS).map(([k, v]) => `<button class="chip" data-vf="${k}" aria-pressed="${ui.volFilter === k}"><span class="dot vst-${k}"></span>${v} · ${count(k)}</button>`).join("")}
+      </div></div>
+      <div class="sp-list">${rows.map((v) => {
+        const sh = shiftsOf(v.id);
+        return `<article class="card sp-card" data-vol="${v.id}">
+          <div class="sp-main">
+            <div><h3>${esc(v.first)} ${esc(v.last)} ${v.status === "pending" ? '<span class="badge fundraiser">needs approval</span>' : ""}</h3>
+              <p class="muted"><a href="mailto:${esc(v.email)}">${esc(v.email)}</a>${v.phone ? ` · ${esc(v.phone)}` : ""} · ${esc(v.role || "—")}${v.grade ? `, grade ${esc(v.grade)}` : ""}</p></div>
+            <div class="sp-tier"><b>${v.hours || 0} hrs</b><small>joined ${ago(v.at)}</small></div>
+          </div>
+          <dl class="sp-facts">
+            <div><dt>Likes</dt><dd>${esc((v.interests || []).join(", ") || "—")}</dd></div>
+            <div><dt>Free</dt><dd>${esc((v.availability || []).join(", ") || "—")}</dd></div>
+            ${v.guardianEmail ? `<div><dt>Guardian</dt><dd><a href="mailto:${esc(v.guardianEmail)}">${esc(v.guardianEmail)}</a></dd></div>` : ""}
+            <div><dt>Shirt · hours form</dt><dd>${esc(v.shirt || "—")} · ${esc(v.serviceHours || "—")}</dd></div>
+            ${v.message ? `<div><dt>Notes from them</dt><dd>${esc(v.message)}</dd></div>` : ""}
+            <div><dt>Shifts</dt><dd>${sh.length ? sh.map((x) => `<span class="shift-tag">${esc(x.ev.title)} · ${esc(x.shift)} <button class="x" data-del-signup="${x.id}" aria-label="Remove from shift" title="Remove">×</button></span>`).join("") : "none yet"}</dd></div>
+          </dl>
+          <div class="sp-controls">
+            <label class="field inline"><span>Status</span><select data-vol-status>${Object.entries(VSTATUS).map(([k, l]) => `<option value="${k}" ${v.status === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+            <label class="field inline hours"><span>Service hours</span><input data-vol-hours type="number" min="0" step="0.25" value="${v.hours || 0}"></label>
+            <label class="field grow"><span>Notes</span><input data-vol-notes value="${esc(v.notes)}" placeholder="Great with check-in…"></label>
+            <button class="btn btn-sm btn-ghost" data-vol-reset title="Give them a temporary password">Reset password</button>
+            <button class="icon-btn" data-vol-del aria-label="Delete volunteer" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg></button>
+          </div>
+        </article>`;
+      }).join("") || `<section class="card empty-card"><div data-sticker="heart" data-still></div><p>${all.length ? "No volunteers with this status." : "No volunteers yet. Share the sign-up form to get the first one."}</p></section>`}</div>`;
+  }
+
+  /* ---------------- ideas ---------------- */
+  function ideas() {
+    const all = DB.ideas.slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+    const rows = all.filter((x) => ui.ideaFilter === "all" || x.status === ui.ideaFilter);
+    const count = (st) => all.filter((x) => x.status === st).length;
+    return head("event ideas", "Event ideas", `<a class="btn btn-ghost" href="pitch.html" target="_blank" rel="noopener">Open pitch form ↗</a><button class="btn btn-ghost" data-export-ideas ${all.length ? "" : "disabled"}>Export CSV</button>`) + `
+      <div class="toolbar"><div class="filters" role="group" aria-label="Filter by status">
+        <button class="chip" data-if="all" aria-pressed="${ui.ideaFilter === "all"}">All · ${all.length}</button>
+        ${Object.entries(ISTATUS).map(([k, v]) => `<button class="chip" data-if="${k}" aria-pressed="${ui.ideaFilter === k}"><span class="dot ist-${k}"></span>${v} · ${count(k)}</button>`).join("")}
+      </div></div>
+      <div class="sp-list">${rows.map((x) => `
+        <article class="card sp-card" data-idea="${x.id}">
+          <div class="sp-main">
+            <div><h3>${esc(x.eventName || "Untitled idea")}</h3><p class="muted">${esc(x.first)} ${esc(x.last)} · <a href="mailto:${esc(x.email)}">${esc(x.email)}</a> · ${esc(x.who || "—")}${x.club ? ` (${esc(x.club)})` : ""}</p></div>
+            <div class="sp-tier"><b>${esc(x.raise || "—")}</b><small>${ago(x.at)}</small></div>
+          </div>
+          <blockquote class="pitch-quote">${esc(x.pitch)}</blockquote>
+          <dl class="sp-facts">
+            <div><dt>Type</dt><dd>${esc(x.kind || "—")}</dd></div>
+            <div><dt>When</dt><dd>${esc(x.when || "—")}</dd></div>
+            <div><dt>Crowd</dt><dd>${esc(x.size || "—")}</dd></div>
+            <div><dt>Needs</dt><dd>${esc((x.needs || []).join(", ") || "—")}</dd></div>
+            ${x.message ? `<div><dt>Also</dt><dd>${esc(x.message)}</dd></div>` : ""}
+          </dl>
+          <div class="sp-controls">
+            <label class="field inline"><span>Status</span><select data-idea-status>${Object.entries(ISTATUS).map(([k, l]) => `<option value="${k}" ${x.status === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+            <label class="field grow"><span>Notes</span><input data-idea-notes value="${esc(x.notes)}" placeholder="Talk to the activities office about the gym…"></label>
+            <button class="btn btn-sm btn-ghost" data-idea-make title="Start an event from this idea">Turn into event</button>
+            <button class="icon-btn" data-idea-del aria-label="Delete idea" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg></button>
+          </div>
+        </article>`).join("") || `<section class="card empty-card"><div data-sticker="plane" data-still></div><p>${all.length ? "No ideas with this status." : "No pitches yet. The pitch form lives on the Events and Get involved pages."}</p></section>`}</div>`;
+  }
+
   /* ---------------- bindings per view ---------------- */
   const bind = {
+    volunteers() {
+      const pane = $("[data-pane]");
+      const vidOf = (el) => el.closest("[data-vol]").dataset.vol;
+      const patch = async (el, body, msg) => {
+        try { const v = await api("PATCH", `/api/admin/volunteers/${vidOf(el)}`, body); Object.assign(DB.volunteers.find((x) => x.id === v.id), v); toast(msg); }
+        catch (x) { toast(x.message, true); }
+      };
+      pane.addEventListener("click", async (e) => {
+        const f = e.target.closest("[data-vf]"); if (f) { ui.volFilter = f.dataset.vf; route(); return; }
+        if (e.target.closest("[data-export-vol]")) {
+          return csv("volunteers.csv", ["First", "Last", "Email", "Phone", "Role", "Grade", "Guardian email", "Interests", "Availability", "Shirt", "Service hours form", "Status", "Hours", "Shifts", "Notes", "Joined"],
+            DB.volunteers.map((v) => [v.first, v.last, v.email, v.phone, v.role, v.grade, v.guardianEmail, (v.interests || []).join("; "), (v.availability || []).join("; "), v.shirt, v.serviceHours, v.status, v.hours,
+              DB.signups.filter((x) => x.volunteerId === v.id).map((x) => `${DB.events.find((ev) => ev.id === x.eventId)?.title || ""} (${x.shift})`).join("; "), v.notes, v.at]));
+        }
+        const ds = e.target.closest("[data-del-signup]");
+        if (ds) {
+          if (!confirm("Remove this volunteer from the shift?")) return;
+          try { await api("DELETE", `/api/admin/signups/${ds.dataset.delSignup}`); await refresh(); route(); toast("Removed from shift"); } catch (x) { toast(x.message, true); }
+        }
+        const rs = e.target.closest("[data-vol-reset]");
+        if (rs) {
+          const v = DB.volunteers.find((x) => x.id === vidOf(rs));
+          if (!confirm(`Give ${v.first} a new temporary password? Their old one will stop working.`)) return;
+          try { const { temporaryPassword } = await api("POST", `/api/admin/volunteers/${v.id}/reset-password`); prompt(`Temporary password for ${v.first} ${v.last}. Send it to them privately; they can change it under My profile.`, temporaryPassword); }
+          catch (x) { toast(x.message, true); }
+        }
+        const del = e.target.closest("[data-vol-del]");
+        if (del) {
+          const v = DB.volunteers.find((x) => x.id === vidOf(del));
+          if (!confirm(`Delete ${v.first} ${v.last}'s volunteer account and their shift sign-ups? This can't be undone.`)) return;
+          try { await api("DELETE", `/api/admin/volunteers/${v.id}`); await refresh(); route(); toast("Volunteer deleted"); } catch (x) { toast(x.message, true); }
+        }
+      });
+      pane.addEventListener("change", async (e) => {
+        if (e.target.matches("[data-vol-status]")) { await patch(e.target, { status: e.target.value }, e.target.value === "approved" ? "Approved. They can book shifts now." : `Marked ${VSTATUS[e.target.value].toLowerCase()}`); route(); }
+        if (e.target.matches("[data-vol-hours]")) await patch(e.target, { hours: e.target.value }, "Hours saved");
+        if (e.target.matches("[data-vol-notes]")) await patch(e.target, { notes: e.target.value }, "Notes saved");
+      });
+    },
+    ideas() {
+      const pane = $("[data-pane]");
+      const iidOf = (el) => el.closest("[data-idea]").dataset.idea;
+      const patch = async (el, body, msg) => {
+        try { const it = await api("PATCH", `/api/admin/ideas/${iidOf(el)}`, body); Object.assign(DB.ideas.find((x) => x.id === it.id), it); toast(msg); }
+        catch (x) { toast(x.message, true); }
+      };
+      pane.addEventListener("click", async (e) => {
+        const f = e.target.closest("[data-if]"); if (f) { ui.ideaFilter = f.dataset.if; route(); return; }
+        if (e.target.closest("[data-export-ideas]")) {
+          return csv("event-ideas.csv", ["Event", "First", "Last", "Email", "Who", "Club", "Type", "Pitch", "When", "Crowd", "Could raise", "Needs", "Message", "Status", "Notes", "Pitched at"],
+            DB.ideas.map((x) => [x.eventName, x.first, x.last, x.email, x.who, x.club, x.kind, x.pitch, x.when, x.size, x.raise, (x.needs || []).join("; "), x.message, x.status, x.notes, x.at]));
+        }
+        const mk = e.target.closest("[data-idea-make]");
+        if (mk) {
+          const x = DB.ideas.find((i) => i.id === iidOf(mk));
+          const cat = /hackathon/i.test(x.kind) ? "hackathon" : "fundraiser";
+          eventForm(null, { title: x.eventName || "", category: cat, blurb: (x.pitch || "").slice(0, 400) });
+        }
+        const del = e.target.closest("[data-idea-del]");
+        if (del) {
+          const x = DB.ideas.find((i) => i.id === iidOf(del));
+          if (!confirm(`Delete the pitch “${x.eventName || "Untitled"}”? This can't be undone.`)) return;
+          try { await api("DELETE", `/api/admin/ideas/${x.id}`); await refresh(); route(); toast("Idea deleted"); } catch (x2) { toast(x2.message, true); }
+        }
+      });
+      pane.addEventListener("change", async (e) => {
+        if (e.target.matches("[data-idea-status]")) { await patch(e.target, { status: e.target.value }, `Marked ${ISTATUS[e.target.value].toLowerCase()}`); route(); }
+        if (e.target.matches("[data-idea-notes]")) await patch(e.target, { notes: e.target.value }, "Notes saved");
+      });
+    },
     fundraising() {
       const cfg = $("[data-config]");
       cfg.addEventListener("input", () => liveGoal(+cfg.raised.value, +cfg.goal.value || 1));

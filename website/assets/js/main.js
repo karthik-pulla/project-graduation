@@ -10,7 +10,10 @@
   } catch {}
   if (!SITE) { const seed = window.PG_SEED || {}; SITE = { config: seed.config || {}, events: seed.events || [], sponsors: [] }; }
   const CFG = SITE.config;
-  const EVENTS = SITE.events.slice().sort((a, b) => new Date(a.start) - new Date(b.start));
+  const ALL = SITE.events.slice().sort((a, b) => new Date(a.start) - new Date(b.start));
+  // public events are for participants; volunteer shifts live in the volunteer portal
+  const EVENTS = ALL.filter((e) => e.category !== "volunteer");
+  const SHIFTS = ALL.filter((e) => e.category === "volunteer" && new Date(e.end) > new Date());
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -34,13 +37,6 @@
     time: (d) => new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
     range: (ev) => `${fmt.time(ev.start)} – ${fmt.time(ev.end)}`,
   };
-
-  /* ---------- nav ---------- */
-  const toggle = $(".nav-toggle"), links = $(".nav-links");
-  toggle && toggle.addEventListener("click", () => {
-    const open = links.classList.toggle("open");
-    toggle.setAttribute("aria-expanded", open);
-  });
 
   /* ---------- highlighters + reveal on scroll ---------- */
   const io = new IntersectionObserver((entries) => {
@@ -87,7 +83,6 @@
   const ruler = $("[data-ruler]");
   if (ruler) {
     const pct = Math.min(100, (CFG.raised / CFG.goal) * 100);
-    $$("[data-raised]").forEach((el) => (el.textContent = money(CFG.raised)));
     $$("[data-goal]").forEach((el) => (el.textContent = money(CFG.goal)));
     $$("[data-togo]").forEach((el) => (el.textContent = money(Math.max(0, CFG.goal - CFG.raised))));
     const ro = new IntersectionObserver(([e]) => {
@@ -98,7 +93,37 @@
     }, { threshold: 0.5 });
     ro.observe(ruler);
   }
+  /* ---------- hand-drawn note pointing at the gold tile in a pattern band ---------- */
+  // The tile lives in a CSS mask, so measure where the mask actually draws it.
+  const TILE = { iw: 2400, ih: 1769, x0: 0.4242, y0: 0.4245, x1: 0.5729, y1: 0.5817 };
+  const placeTileNotes = () => $$("[data-tile-note]").forEach((note) => {
+    const band = note.closest(".band"), cs = getComputedStyle(band, "::after");
+    const L = parseFloat(cs.left), T = parseFloat(cs.top), BW = parseFloat(cs.width), BH = parseFloat(cs.height);
+    if (!BW || !BH) return;
+    const sc = Math.min(BW / TILE.iw, BH / TILE.ih), w = TILE.iw * sc, h = TILE.ih * sc;
+    const pos = (cs.webkitMaskPosition || cs.maskPosition || "100% 50%").split(" ").map((v) => (/%/.test(v) ? parseFloat(v) / 100 : v === "right" || v === "bottom" ? 1 : v === "left" || v === "top" ? 0 : 0.5));
+    const ox = L + (BW - w) * (pos[0] ?? 1), oy = T + (BH - h) * (pos[1] ?? 0.5);
+    const tw = (TILE.x1 - TILE.x0) * w, th = (TILE.y1 - TILE.y0) * h;
+    // aim the arrow tip just off the tile's lower-left corner
+    note.style.left = (ox + TILE.x0 * w + tw * 0.12) + "px";
+    note.style.top = (oy + TILE.y0 * h + th * 0.82) + "px";
+    note.classList.add("ready");
+  });
+  if ($("[data-tile-note]")) { placeTileNotes(); addEventListener("resize", placeTileNotes); }
+
+  $$("[data-raised]").forEach((el) => (el.textContent = money(CFG.raised || 0)));
   $$("[data-event-count]").forEach((el) => (el.textContent = EVENTS.length));
+
+  /* ---------- get involved: upcoming volunteer shifts (booked in the portal) ---------- */
+  const volList = $("[data-vol-list]");
+  if (volList) {
+    volList.innerHTML = SHIFTS.length ? SHIFTS.slice(0, 4).map((e) => {
+      const d = new Date(e.start), left = Math.max(0, e.capacity - taken(e));
+      return `<li class="vol-row reveal"><div class="cal" aria-hidden="true"><div class="m">${d.toLocaleDateString("en-US", { month: "short" })}</div><div class="d">${d.getDate()}</div><div class="w">${d.toLocaleDateString("en-US", { weekday: "short" })}</div></div>
+        <div><b>${esc(e.title)}</b><small>${esc(e.location)} · ${(e.shifts || []).length ? `${e.shifts.length} shifts` : "one shift"} · ${left} spots left</small></div></li>`;
+    }).join("") : `<li class="muted">New volunteer shifts are posted here as events get closer.</li>`;
+    observeAll(volList);
+  }
 
   /* ---------- sponsors grid (confirmed sponsors the admin chose to show) ---------- */
   const grid = $("[data-sponsor-grid]");

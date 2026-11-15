@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Volunteer Portal · Project Graduation</title>
+  <meta name="theme-color" content="#121114">
+  <link rel="icon" href="assets/mark-maroon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="admin portal">
+
+  <section class="login" data-login hidden>
+    <form class="login-card" data-login-form>
+      <div data-sticker="heart" data-still class="login-sticker"></div>
+      <p class="eyebrow">// volunteer portal</p>
+      <h1>Welcome back</h1>
+      <label class="field"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
+      <p class="login-error" role="alert" data-login-error></p>
+      <button class="btn btn-maroon" type="submit">Log in <span class="arrow">→</span></button>
+      <p class="login-alt">New volunteer? <a href="volunteer.html">Register here</a><br><span class="muted">Forgot your password? Email <a href="mailto:hello@hhsprojectgrad.org">hello@hhsprojectgrad.org</a> and we'll reset it.</span></p>
+      <a class="login-back" href="get-involved.html">← back to Get involved</a>
+    </form>
+  </section>
+
+  <div class="console" data-console hidden>
+    <aside class="side">
+      <span data-brand></span>
+      <nav class="side-nav" aria-label="Portal sections">
+        <a href="#home" data-tab="home"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9.5 10 4l7 5.5V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M8 17v-5h4v5"/></svg>Home</a>
+        <a href="#shifts" data-tab="shifts"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M3 8.5h14M7 2.5v4M13 2.5v4"/></svg>Find shifts</a>
+        <a href="#profile" data-tab="profile"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="7" r="3.5"/><path d="M3.5 17c1-3.5 3.6-5 6.5-5s5.5 1.5 6.5 5"/></svg>My profile</a>
+      </nav>
+      <div class="side-foot">
+        <a href="index.html">Main site ↗</a>
+        <button type="button" data-logout>Log out</button>
+      </div>
+    </aside>
+    <main class="pane" data-pane tabindex="-1"></main>
+  </div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/stickers.js"></script>
+  <script src="assets/js/nav.js"></script>
+  <script src="assets/js/portal.js"></script>
+</body>
+</html>

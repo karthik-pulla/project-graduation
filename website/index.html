@@ -14,31 +14,7 @@
 </head>
 <body>
 
-  <div class="topbar">
-    <div class="wrap">
-      <span>Class of <span data-year>2027</span>: grad night is free for every senior.</span>
-      <span class="sep">|</span>
-      <a href="events.html">Register for events →</a>
-    </div>
-  </div>
-
-  <nav class="nav" aria-label="Main">
-    <div class="wrap">
-      <a class="brand" href="index.html">
-        <img src="assets/mark-white.png" alt="">
-        <span>Project Graduation<small>Hillsborough High</small></span>
-      </a>
-      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <ul class="nav-links">
-        <li><a href="events.html">Events</a></li>
-        <li><a href="index.html#help">Get involved</a></li>
-        <li><a href="index.html#about">About</a></li>
-        <li><a href="sponsor.html">Sponsor</a></li>
-        <li><a href="index.html#faq">FAQ</a></li>
-        <li><a class="btn btn-sm btn-gold" href="index.html#donate">Donate</a></li>
-      </ul>
-    </div>
-  </nav>
+  <div data-site-header data-current=""></div>
 
   <!-- ============================== HERO ============================== -->
   <header class="hero on-dark">
@@ -61,7 +37,7 @@
           <div><b data-s>00</b><span>sec</span></div>
         </div>
         <div class="links">
-          <a class="link-arrow" href="#help">Volunteer with us ↗</a>
+          <a class="link-arrow" href="get-involved.html">Volunteer with us ↗</a>
           <a class="link-arrow" href="sponsor.html">Become a sponsor ↗</a>
         </div>
       </aside>
@@ -89,7 +65,7 @@
     <div class="wrap">
       <ul class="cat-row">
         <li><a class="hover-boil" href="events.html?type=hackathon"><div data-sticker="code" data-still></div>Hackathons</a></li>
-        <li><a class="hover-boil" href="events.html?type=volunteer"><div data-sticker="heart" data-still></div>Volunteer</a></li>
+        <li><a class="hover-boil" href="get-involved.html"><div data-sticker="heart" data-still></div>Volunteer</a></li>
         <li><a class="hover-boil" href="events.html?type=fundraiser"><div data-sticker="ticket" data-still></div>Fundraisers</a></li>
         <li><a class="hover-boil" href="events.html?type=community"><div data-sticker="bubble" data-still></div>Community</a></li>
         <li><a class="hover-boil" href="#sponsors"><div data-sticker="badge" data-still></div>Sponsors</a></li>
@@ -172,7 +148,7 @@
           <span class="num">01 / volunteer</span>
           <h3>Lend a hand</h3>
           <p>Wrap gifts, run a booth, or help set up the big night. Students can earn service hours too.</p>
-          <a class="link-arrow" href="events.html?type=volunteer">See volunteer shifts →</a>
+          <a class="link-arrow" href="volunteer.html">Sign up to volunteer →</a>
         </article>
         <article class="help-card hover-boil reveal">
           <div data-sticker="burst" data-text="$" data-size="92" data-still></div>
@@ -238,20 +214,7 @@
   </section>
 
   <!-- ============================== FOOTER ============================== -->
-  <footer class="footer">
-    <div class="wrap">
-      <div class="footer-grid">
-        <div>
-          <img class="wm" src="assets/wordmark-hhs-dark.png" alt="Project Graduation Hillsborough">
-          <p style="max-width:34ch;margin:0">One safe, all-night celebration for the graduating class, made possible by families, staff, and neighbors.</p>
-        </div>
-        <div><h4>Explore</h4><ul><li><a href="events.html">Events</a></li><li><a href="index.html#about">About</a></li><li><a href="index.html#faq">FAQ</a></li></ul></div>
-        <div><h4>Help out</h4><ul><li><a href="events.html?type=volunteer">Volunteer</a></li><li><a href="index.html#donate">Donate</a></li><li><a href="sponsor.html">Become a sponsor</a></li></ul></div>
-        <div><h4>Contact</h4><ul><li><a href="mailto:hello@hhsprojectgrad.org">hello@hhsprojectgrad.org</a></li><li><a href="https://instagram.com/" rel="noopener">Instagram</a></li></ul></div>
-      </div>
-      <div class="fine"><span>© <span data-year>2027</span> Project Graduation · Hillsborough High School</span><span class="mono">made with ♥ by the class of '27 community</span></div>
-    </div>
-  </footer>
+  <div data-site-footer></div>
 
   <dialog class="reg" aria-labelledby="reg-title">
     <button class="reg-close" data-close aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3 3 13"/></svg></button>
@@ -260,6 +223,7 @@
 
   <script src="assets/js/data.js"></script>
   <script src="assets/js/stickers.js"></script>
+  <script src="assets/js/nav.js"></script>
   <script src="assets/js/main.js"></script>
 </body>
 </html>

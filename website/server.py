@@ -10,7 +10,7 @@ Data lives in .data/db.json, which is created from assets/js/data.js on first
 start and never served to the public. If ADMIN_PASSWORD isn't set, a random
 password is generated, saved in .data/admin_password.txt, and printed at startup.
 """
-import hmac, json, os, re, secrets, threading, time, uuid, mimetypes
+import hashlib, hmac, json, os, re, secrets, threading, time, uuid, mimetypes
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -29,9 +29,13 @@ CATEGORIES = {"hackathon", "volunteer", "fundraiser", "community"}
 THEMES = {"dark", "light", "gold", "maroon"}
 EXTRAS = {"team", "experience", "shirt", "shift", "guests"}
 SPONSOR_STATUS = {"new", "contacted", "confirmed", "declined"}
+IDEA_STATUS = {"new", "reviewing", "approved", "passed"}
+VOL_STATUS = {"pending", "approved", "inactive"}
+WHOLE = "Whole event"
 
 lock = threading.Lock()
-sessions = {}            # token -> expiry
+sessions = {}            # admin token -> expiry
+vsessions = {}           # volunteer token -> (volunteer id, expiry)
 failed = {}              # ip -> (count, first_ts)
 
 
@@ -51,7 +55,10 @@ def load_seed():
 
 def read_db():
     with open(DB_PATH, encoding="utf-8") as f:
-        return json.load(f)
+        db = json.load(f)
+    for k in ("events", "registrations", "sponsors", "ideas", "volunteers", "signups"):
+        db.setdefault(k, [])
+    return db
 
 def write_db(db):
     tmp = DB_PATH + ".tmp"
@@ -105,7 +112,42 @@ def slug(title, taken):
     return out
 
 def count_regs(db, event_id):
-    return sum(1 for r in db["registrations"] if r["eventId"] == event_id)
+    return (sum(1 for r in db["registrations"] if r["eventId"] == event_id)
+            + sum(1 for x in db["signups"] if x["eventId"] == event_id))
+
+def hash_pw(pw, salt=None):
+    salt = salt or secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt, 200_000)
+    return f"pbkdf2$200000${salt.hex()}${dk.hex()}"
+
+def check_pw(pw, stored):
+    try:
+        _, it, salt, dk = stored.split("$")
+        got = hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), int(it))
+        return hmac.compare_digest(got.hex(), dk)
+    except (ValueError, AttributeError):
+        return False
+
+def strs(v, n=40, k=12):
+    return [s(x, n) for x in v if s(x, n)][:k] if isinstance(v, list) else []
+
+def public_volunteer(v):
+    return {k: val for k, val in v.items() if k != "pw"}
+
+def shifts_of(e):
+    return e.get("shifts") or [WHOLE]
+
+def throttled(key):
+    cnt, first = failed.get(key, (0, time.time()))
+    if time.time() - first > 900:
+        failed.pop(key, None)
+        return False
+    return cnt >= 8
+
+def note_fail(key):
+    cnt, first = failed.get(key, (0, time.time()))
+    failed[key] = (cnt + 1, first)
+    time.sleep(0.6)
 
 def public_view(db):
     events = []
@@ -221,7 +263,14 @@ class Handler(BaseHTTPRequestHandler):
             if not self.authed():
                 return self.error("Not signed in", 401)
             with lock:
-                return self.send_json(read_db())
+                db = read_db()
+            db["volunteers"] = [public_volunteer(v) for v in db["volunteers"]]
+            return self.send_json(db)
+        if path == "/api/volunteer/me":
+            vid = self.volunteer()
+            if not vid:
+                return self.error("Not signed in", 401)
+            return self.volunteer_me(vid)
         if path.startswith("/api/"):
             return self.error("Not found", 404)
         self.serve_static(path)
@@ -252,6 +301,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.sponsor_apply(data)
             if method == "POST" and path == "/api/admin/login":
                 return self.login(data)
+            if method == "POST" and path == "/api/ideas":
+                return self.idea_submit(data)
+            if method == "POST" and path == "/api/volunteers":
+                return self.volunteer_register(data)
+            if method == "POST" and path == "/api/volunteer/login":
+                return self.volunteer_login(data)
+            if path.startswith("/api/volunteer/"):
+                return self.volunteer_route(method, path, data)
 
             # ---------- admin
             if not path.startswith("/api/admin/"):
@@ -269,6 +326,19 @@ class Handler(BaseHTTPRequestHandler):
             m = re.fullmatch(r"/api/admin/sponsors/([\w-]+)", path)
             if m:
                 return self.sponsor_admin(method, m.group(1), data)
+            m = re.fullmatch(r"/api/admin/ideas/([\w-]+)", path)
+            if m:
+                return self.idea_admin(method, m.group(1), data)
+            m = re.fullmatch(r"/api/admin/volunteers/([\w-]+)(/reset-password)?", path)
+            if m:
+                return self.volunteer_admin(method, m.group(1), bool(m.group(2)), data)
+            m = re.fullmatch(r"/api/admin/signups/([\w-]+)", path)
+            if m and method == "DELETE":
+                with lock:
+                    db = read_db()
+                    db["signups"] = [x for x in db["signups"] if x["id"] != m.group(1)]
+                    write_db(db)
+                return self.send_json({"ok": True})
             m = re.fullmatch(r"/api/admin/registrations/([\w-]+)", path)
             if m and method == "DELETE":
                 with lock:
@@ -292,6 +362,8 @@ class Handler(BaseHTTPRequestHandler):
             ev = next((e for e in db["events"] if e["id"] == d.get("eventId")), None)
             if not ev:
                 raise ValueError("That event no longer exists")
+            if ev["category"] == "volunteer":
+                raise ValueError("Volunteer shifts are booked in the volunteer portal.")
             if ev["end"] < datetime.now().isoformat():
                 raise ValueError("Registration for this event has closed")
             taken = ev.get("registered", 0) + count_regs(db, ev["id"])
@@ -334,18 +406,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def login(self, d):
         ip = self.client_address[0]
-        cnt, first = failed.get(ip, (0, time.time()))
-        if time.time() - first > 900:
-            cnt, first = 0, time.time()
-        if cnt >= 8:
+        if throttled(ip):
             return self.error("Too many attempts. Try again in 15 minutes.", 429)
         if hmac.compare_digest(s(d.get("password"), 200).encode(), ADMIN_PW.encode()):
             failed.pop(ip, None)
             tok = secrets.token_urlsafe(32)
             sessions[tok] = time.time() + TOKEN_TTL
             return self.send_json({"token": tok})
-        failed[ip] = (cnt + 1, first)
-        time.sleep(0.6)
+        note_fail(ip)
         return self.error("Wrong password", 401)
 
     # --- admin actions
@@ -384,6 +452,7 @@ class Handler(BaseHTTPRequestHandler):
             if method == "DELETE":
                 db["events"].pop(idx)
                 db["registrations"] = [r for r in db["registrations"] if r["eventId"] != eid]
+                db["signups"] = [x for x in db["signups"] if x["eventId"] != eid]
                 write_db(db)
                 return self.send_json({"ok": True})
         return self.error("Not found", 404)
@@ -406,6 +475,214 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(sp)
             if method == "DELETE":
                 db["sponsors"].remove(sp)
+                write_db(db)
+                return self.send_json({"ok": True})
+        return self.error("Not found", 404)
+
+    # --- event pitches
+    def idea_submit(self, d):
+        first, email = s(d.get("first"), 60), s(d.get("email"), 120)
+        if not first:
+            raise ValueError("Name is required")
+        if not valid_email(email):
+            raise ValueError("Please enter a valid email")
+        if not s(d.get("pitch"), 2000):
+            raise ValueError("Tell us about the idea")
+        rec = {
+            "id": uuid.uuid4().hex[:10], "at": now_iso(), "status": "new", "notes": "",
+            "first": first, "last": s(d.get("last"), 60), "email": email,
+            "who": s(d.get("who"), 40), "club": s(d.get("club"), 80), "eventName": s(d.get("eventName"), 120),
+            "kind": s(d.get("kind"), 40), "pitch": s(d.get("pitch"), 2000), "when": s(d.get("when"), 40),
+            "size": s(d.get("size"), 40), "raise": s(d.get("raise"), 40), "needs": strs(d.get("needs")),
+            "message": s(d.get("message"), 1200),
+        }
+        with lock:
+            db = read_db()
+            db["ideas"].append(rec)
+            write_db(db)
+        self.send_json({"ok": True, "id": rec["id"]}, 201)
+
+    def idea_admin(self, method, iid, d):
+        with lock:
+            db = read_db()
+            it = next((x for x in db["ideas"] if x["id"] == iid), None)
+            if not it:
+                return self.error("Idea not found", 404)
+            if method == "PATCH":
+                if "status" in d:
+                    if d["status"] not in IDEA_STATUS:
+                        raise ValueError("Unknown status")
+                    it["status"] = d["status"]
+                if "notes" in d: it["notes"] = s(d["notes"], 2000)
+                write_db(db)
+                return self.send_json(it)
+            if method == "DELETE":
+                db["ideas"].remove(it)
+                write_db(db)
+                return self.send_json({"ok": True})
+        return self.error("Not found", 404)
+
+    # --- volunteers
+    def volunteer(self):
+        h = self.headers.get("Authorization", "")
+        tok = h[7:] if h.startswith("Bearer ") else ""
+        ent = vsessions.get(tok)
+        if ent and ent[1] > time.time():
+            return ent[0]
+        vsessions.pop(tok, None)
+        return None
+
+    def volunteer_register(self, d):
+        first, last, email = s(d.get("first"), 60), s(d.get("last"), 60), s(d.get("email"), 120).lower()
+        pw = str(d.get("password") or "")
+        if not first or not last:
+            raise ValueError("Name is required")
+        if not valid_email(email):
+            raise ValueError("Please enter a valid email")
+        if len(pw) < 8 or len(pw) > 200:
+            raise ValueError("Password needs at least 8 characters")
+        role = s(d.get("role"), 40)
+        guardian = s(d.get("guardianEmail"), 120)
+        if role.startswith("HHS student") and not valid_email(guardian):
+            raise ValueError("Students need a parent or guardian email")
+        rec = {
+            "id": uuid.uuid4().hex[:10], "at": now_iso(), "status": "pending", "hours": 0, "notes": "",
+            "first": first, "last": last, "email": email, "phone": s(d.get("phone"), 30),
+            "role": role, "grade": s(d.get("grade"), 20), "guardianEmail": guardian,
+            "interests": strs(d.get("interests")), "availability": strs(d.get("availability")),
+            "shirt": s(d.get("shirt"), 5), "serviceHours": s(d.get("serviceHours"), 40),
+            "message": s(d.get("message"), 1200), "pw": hash_pw(pw),
+        }
+        with lock:
+            db = read_db()
+            if any(v["email"] == email for v in db["volunteers"]):
+                raise ValueError("That email already has a volunteer account. Try logging in.")
+            db["volunteers"].append(rec)
+            write_db(db)
+        self.send_json({"ok": True}, 201)
+
+    def volunteer_login(self, d):
+        key = ("v", self.client_address[0])
+        if throttled(key):
+            return self.error("Too many attempts. Try again in 15 minutes.", 429)
+        email, pw = s(d.get("email"), 120).lower(), str(d.get("password") or "")[:200]
+        with lock:
+            v = next((x for x in read_db()["volunteers"] if x["email"] == email), None)
+        if not v or not check_pw(pw, v.get("pw", "")):
+            note_fail(key)
+            return self.error("Email or password is incorrect", 401)
+        failed.pop(key, None)
+        tok = secrets.token_urlsafe(32)
+        vsessions[tok] = (v["id"], time.time() + TOKEN_TTL)
+        self.send_json({"token": tok})
+
+    def volunteer_me(self, vid):
+        with lock:
+            db = read_db()
+        v = next((x for x in db["volunteers"] if x["id"] == vid), None)
+        if not v:
+            return self.error("Account not found", 401)
+        now = datetime.now().isoformat()
+        opps = []
+        for e in sorted(db["events"], key=lambda e: e["start"]):
+            if e["category"] != "volunteer" or e["end"] < now:
+                continue
+            left = e["capacity"] - e.get("registered", 0) - count_regs(db, e["id"])
+            opps.append({k: e[k] for k in ("id", "title", "start", "end", "location", "blurb", "capacity")}
+                        | {"shifts": shifts_of(e), "left": max(0, left)})
+        evs = {e["id"]: e for e in db["events"]}
+        mine = [x | {"title": evs[x["eventId"]]["title"], "start": evs[x["eventId"]]["start"],
+                     "end": evs[x["eventId"]]["end"], "location": evs[x["eventId"]]["location"]}
+                for x in db["signups"] if x["volunteerId"] == vid and x["eventId"] in evs]
+        self.send_json({"me": public_volunteer(v), "opportunities": opps, "signups": mine})
+
+    def volunteer_route(self, method, path, d):
+        vid = self.volunteer()
+        if not vid:
+            return self.error("Not signed in", 401)
+        if method == "POST" and path == "/api/volunteer/logout":
+            vsessions.pop(self.headers.get("Authorization", "")[7:], None)
+            return self.send_json({"ok": True})
+        with lock:
+            db = read_db()
+            v = next((x for x in db["volunteers"] if x["id"] == vid), None)
+            if not v:
+                return self.error("Account not found", 401)
+            if method == "PATCH" and path == "/api/volunteer/me":
+                if "phone" in d: v["phone"] = s(d["phone"], 30)
+                if "shirt" in d: v["shirt"] = s(d["shirt"], 5)
+                if "interests" in d: v["interests"] = strs(d["interests"])
+                if "availability" in d: v["availability"] = strs(d["availability"])
+                write_db(db)
+                return self.send_json(public_volunteer(v))
+            if method == "POST" and path == "/api/volunteer/password":
+                if not check_pw(str(d.get("current") or ""), v["pw"]):
+                    raise ValueError("Current password is incorrect")
+                new = str(d.get("new") or "")
+                if len(new) < 8 or len(new) > 200:
+                    raise ValueError("New password needs at least 8 characters")
+                v["pw"] = hash_pw(new)
+                write_db(db)
+                return self.send_json({"ok": True})
+            if method == "POST" and path == "/api/volunteer/signups":
+                if v["status"] != "approved":
+                    raise ValueError("You can pick shifts once an organizer approves your account.")
+                ev = next((e for e in db["events"] if e["id"] == d.get("eventId")), None)
+                if not ev or ev["category"] != "volunteer":
+                    raise ValueError("That volunteer opportunity no longer exists")
+                if ev["end"] < datetime.now().isoformat():
+                    raise ValueError("That shift has already happened")
+                shift = s(d.get("shift"), 40)
+                if shift not in shifts_of(ev):
+                    raise ValueError("Pick one of the listed shifts")
+                if any(x["volunteerId"] == vid and x["eventId"] == ev["id"] and x["shift"] == shift for x in db["signups"]):
+                    raise ValueError("You're already signed up for that shift")
+                if ev.get("registered", 0) + count_regs(db, ev["id"]) >= ev["capacity"]:
+                    raise ValueError("That opportunity is full")
+                rec = {"id": uuid.uuid4().hex[:10], "volunteerId": vid, "eventId": ev["id"], "shift": shift, "at": now_iso()}
+                db["signups"].append(rec)
+                write_db(db)
+                return self.send_json(rec, 201)
+            m = re.fullmatch(r"/api/volunteer/signups/([\w-]+)", path)
+            if method == "DELETE" and m:
+                before = len(db["signups"])
+                db["signups"] = [x for x in db["signups"] if not (x["id"] == m.group(1) and x["volunteerId"] == vid)]
+                if len(db["signups"]) == before:
+                    return self.error("Sign-up not found", 404)
+                write_db(db)
+                return self.send_json({"ok": True})
+        return self.error("Not found", 404)
+
+    def volunteer_admin(self, method, vid, reset, d):
+        with lock:
+            db = read_db()
+            v = next((x for x in db["volunteers"] if x["id"] == vid), None)
+            if not v:
+                return self.error("Volunteer not found", 404)
+            if reset and method == "POST":
+                temp = secrets.token_urlsafe(8)
+                v["pw"] = hash_pw(temp)
+                for t, (owner, _) in list(vsessions.items()):
+                    if owner == vid:
+                        vsessions.pop(t, None)
+                write_db(db)
+                return self.send_json({"temporaryPassword": temp})
+            if method == "PATCH":
+                if "status" in d:
+                    if d["status"] not in VOL_STATUS:
+                        raise ValueError("Unknown status")
+                    v["status"] = d["status"]
+                if "hours" in d:
+                    try:
+                        v["hours"] = max(0.0, min(10000.0, round(float(d["hours"]) * 4) / 4))
+                    except (TypeError, ValueError):
+                        raise ValueError("Hours must be a number")
+                if "notes" in d: v["notes"] = s(d["notes"], 2000)
+                write_db(db)
+                return self.send_json(public_volunteer(v))
+            if method == "DELETE":
+                db["volunteers"].remove(v)
+                db["signups"] = [x for x in db["signups"] if x["volunteerId"] != vid]
                 write_db(db)
                 return self.send_json({"ok": True})
         return self.error("Not found", 404)
