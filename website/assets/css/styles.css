@@ -869,3 +869,57 @@ body[data-step="review"] .flow-stickers, body[data-step="tiers"] .fs-2 { opacity
   .flow-hint { display: none; }
   .flow-bar .brand span small { display: none; }
 }
+
+/* --------------------------------------------------------------------------
+   Phone polish
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .hero.compact .hero-side { display: none; }            /* shorter events header */
+}
+@media (max-width: 860px) {
+  /* show all seven categories as a 4-across grid instead of a hidden side-scroll */
+  .cat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 0; overflow: visible; padding-bottom: 0; }
+  .cat-row a { padding: 10px 2px; gap: 8px; font-size: .78rem; text-align: center; }
+  .cat-row .sticker { width: 58px; height: 58px; }
+  .cat-row .sticker svg { max-height: 58px; max-width: 64px; }
+  .cat-row [data-sticker="cap"] { height: 58px; }
+  .cat-row [data-sticker="cap"] .sticker { width: 62px; }
+  .cats { padding-bottom: 8px; }
+}
+@media (max-width: 600px) {
+  .topbar .sep { display: none; }
+  .topbar .wrap { gap: 2px 10px; }
+
+  /* notebook: wider writing area, heading on single rule lines */
+  .notebook { padding: 36px 20px 36px 54px; transform: none;
+    background-image:
+      linear-gradient(90deg, transparent 40px, rgba(128,0,0,.35) 40px, rgba(128,0,0,.35) 42px, transparent 42px),
+      repeating-linear-gradient(transparent 0 35px, #dbe4f0 35px 36px); }
+  .notebook::before { left: 10px; width: 20px; background-size: 20px 33.3%; }
+  .notebook h2 { font-size: 1.65rem; line-height: 36px; }
+  .notebook p { font-size: 1rem; }
+  .about-mascot { width: min(220px, 62%); }
+
+  /* donate band: pattern sits low and behind solid buttons */
+  .band::before, .band::after { top: auto; bottom: -4%; right: -30%; width: 130%; height: 46%; opacity: 1; -webkit-mask-position: right bottom; mask-position: right bottom; }
+  .band::before { background: rgba(255,255,255,.06); }
+  .tier { background: var(--ink-2); flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .tier[aria-pressed="true"] { background: #2a2419; }
+
+  /* event rows: date becomes a slim tab on top, text gets the full width */
+  .erow { grid-template-columns: 1fr; gap: 10px; }
+  .cal { display: inline-flex; align-items: stretch; width: auto; justify-self: start; }
+  .cal::before { display: none; }
+  .cal .m { padding: 5px 10px; display: grid; place-items: center; }
+  .cal .d { font-size: 1.05rem; padding: 4px 4px 4px 10px; line-height: 1.4; letter-spacing: -.02em; }
+  .cal .w { padding: 4px 10px 4px 2px; line-height: 1.75; }
+  .erow .side { grid-column: auto; }
+
+  .reg-head .sticker { width: 52px; right: 14px; top: 14px; }
+  .reg-head h2 { padding-right: 56px; }
+  .ecard { min-height: 480px; padding: 24px 22px 20px; }
+}
+/* keyboard shortcut letters mean nothing on touch screens */
+@media (hover: none) {
+  .choice kbd, .tier-card kbd { display: none; }
+}

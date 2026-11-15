@@ -194,3 +194,30 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
   .form-grid, .row3 { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) { .kpis { grid-template-columns: 1fr; } .select { min-width: 0; width: 100%; } }
+
+/* ---------- phone: two-row header, tables become stacked cards ---------- */
+@media (max-width: 820px) {
+  .side { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "brand foot" "nav nav"; padding: 10px 12px 0; gap: 6px 10px; overflow: visible; }
+  .side .brand { grid-area: brand; padding: 0; }
+  .side .brand span { display: block; font-size: .9rem; }
+  .side .brand span small { display: none; }
+  .side-foot { grid-area: foot; margin: 0; }
+  .side-nav { grid-area: nav; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 8px 6px; }
+  .side-nav::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 700px) {
+  .card.flush { overflow: visible; }
+  .table thead { display: none; }
+  .table tbody tr { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .table tbody tr:last-child { border-bottom: 0; }
+  .table td { display: block; padding: 2px 0; border: 0; grid-column: 1; }
+  .table td:last-child:not(:first-child) { grid-column: 2; grid-row: 1 / span 6; align-self: start; }
+  .table td.mono { font-size: .76rem; color: var(--muted); }
+  .table tbody tr:hover td { background: none; }
+  .table td .badge { margin: 4px 0 2px; }
+  .cap-mini { margin-top: 4px; }
+  .table td[colspan] { grid-column: 1 / -1; }
+  .pane-head { margin-bottom: 18px; }
+  .quick-add { width: 100%; }
+  .quick-add input { flex: 1; width: auto; min-width: 0; }
+}
