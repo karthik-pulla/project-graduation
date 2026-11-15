@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Graduation · Hillsborough High School</title>
+  <meta name="description" content="Project Graduation throws Hillsborough High's seniors one safe, all-night celebration. Find events, volunteer, donate, and sponsor.">
+  <meta name="theme-color" content="#121114">
+  <link rel="icon" href="assets/mark-maroon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap">
+      <span>Class of <span data-year>2027</span>: grad night is free for every senior.</span>
+      <span class="sep">|</span>
+      <a href="events.html">Register for events →</a>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Main">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="assets/mark-white.png" alt="">
+        <span>Project Graduation<small>Hillsborough High</small></span>
+      </a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <ul class="nav-links">
+        <li><a href="events.html">Events</a></li>
+        <li><a href="index.html#help">Get involved</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="sponsor.html">Sponsor</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a class="btn btn-sm btn-gold" href="index.html#donate">Donate</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ============================== HERO ============================== -->
+  <header class="hero on-dark">
+    <div class="wrap hero-inner">
+      <div>
+        <p class="eyebrow">// Hillsborough High School · Class of <span data-year>2027</span></p>
+        <h1>Project <span class="g">Graduation</span></h1>
+        <p class="lede">One <span class="hl">safe, all-night celebration</span> for every graduating senior. <strong>Funded by our community</strong>, one event at a time.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-white" href="events.html">Find an event <span class="arrow">→</span></a>
+          <a class="btn btn-ghost" href="#donate">Donate</a>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <p class="tagline">Grad night,<br><span class="hl">loading…</span></p>
+        <div class="countdown mono" data-countdown aria-label="Time until grad night">
+          <div><b data-d>000</b><span>days</span></div>
+          <div><b data-h>00</b><span>hrs</span></div>
+          <div><b data-m>00</b><span>min</span></div>
+          <div><b data-s>00</b><span>sec</span></div>
+        </div>
+        <div class="links">
+          <a class="link-arrow" href="#help">Volunteer with us ↗</a>
+          <a class="link-arrow" href="sponsor.html">Become a sponsor ↗</a>
+        </div>
+      </aside>
+    </div>
+
+    <!-- cut-paper stickers (draggable) -->
+    <div class="sticker-wrap s-cap"    data-sticker="cap"    style="--r:-14deg; --delay:.15s"></div>
+    <div class="sticker-wrap s-burst"  data-sticker="burst"  style="--r:8deg;   --delay:.3s"></div>
+    <div class="sticker-wrap s-aplus"  data-sticker="aplus"  style="--r:10deg;  --delay:.45s"></div>
+    <div class="sticker-wrap s-eyes"   data-sticker="eyes"   style="--r:-8deg;  --delay:.6s"></div>
+    <div class="sticker-wrap s-cursor" data-sticker="cursor" style="--r:-6deg;  --delay:.7s"></div>
+    <div class="sticker-wrap s-pencil" data-sticker="pencil" style="--r:0deg;   --delay:.8s"></div>
+    <div class="sticker-wrap s-mascot" data-sticker="mascot" style="--r:4deg;   --delay:.95s; --boil:1.5s"></div>
+    <span class="hero-note s-note">psst… drag the stickers ↘</span>
+
+    <svg class="tear" viewBox="0 0 1440 130" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <polygon fill="url(#pg-htg)" points="0,50 120,32 210,54 330,20 420,42 560,38 640,68 760,44 880,72 1000,50 1090,64 1200,28 1320,52 1440,36 1440,58 1320,74 1200,50 1090,86 1000,72 880,94 760,66 640,90 560,60 420,64 330,42 210,76 120,54 0,72"/>
+      <polyline fill="none" stroke="#ccb179" stroke-width="3" stroke-linejoin="round" points="0,50 120,32 210,54 330,20 420,42 560,38 640,68 760,44 880,72 1000,50 1090,64 1200,28 1320,52 1440,36"/>
+      <polygon style="fill:var(--paper)" points="0,72 120,54 210,76 330,42 420,64 560,60 640,90 760,66 880,94 1000,72 1090,86 1200,50 1320,74 1440,58 1440,130 0,130"/>
+    </svg>
+  </header>
+
+  <!-- ============================== CATEGORIES ============================== -->
+  <section class="cats" aria-label="Browse">
+    <div class="wrap">
+      <ul class="cat-row">
+        <li><a class="hover-boil" href="events.html?type=hackathon"><div data-sticker="code" data-still></div>Hackathons</a></li>
+        <li><a class="hover-boil" href="events.html?type=volunteer"><div data-sticker="heart" data-still></div>Volunteer</a></li>
+        <li><a class="hover-boil" href="events.html?type=fundraiser"><div data-sticker="ticket" data-still></div>Fundraisers</a></li>
+        <li><a class="hover-boil" href="events.html?type=community"><div data-sticker="bubble" data-still></div>Community</a></li>
+        <li><a class="hover-boil" href="#sponsors"><div data-sticker="badge" data-still></div>Sponsors</a></li>
+        <li><a class="hover-boil" href="#donate"><div data-sticker="burst" data-text="$" data-size="92" data-still></div>Donate</a></li>
+        <li><a class="hover-boil" href="#about"><div data-sticker="cap" data-still></div>Grad Night</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================== EVENTS CAROUSEL ============================== -->
+  <section class="section-tight" aria-labelledby="ev-title">
+    <div class="wrap section-head">
+      <h2 class="section-title" id="ev-title"><span class="hl-box">Upcoming events.</span> <span class="muted">Show up, sign up, help out.</span></h2>
+      <a class="link-arrow" href="events.html">All events →</a>
+    </div>
+    <div class="carousel">
+      <div class="track" data-event-track></div>
+      <div class="wrap carousel-ctrl">
+        <button class="circle-btn" data-prev aria-label="Previous events"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+        <button class="circle-btn" data-next aria-label="Next events"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== GOAL ============================== -->
+  <section class="section" aria-labelledby="goal-title">
+    <div class="wrap goal">
+      <div class="reveal">
+        <p class="eyebrow">// fundraising progress</p>
+        <h2 class="sr-only" id="goal-title">Fundraising progress</h2>
+        <p class="big"><span data-raised>$0</span><br><small>raised of <span data-goal>$100,000</span></small></p>
+        <p class="muted" style="max-width:44ch;margin:0">Every dollar goes to grad night: the venue, food, rides, entertainment, and prizes. That way <span class="hl ink">no senior pays to get in</span>.</p>
+        <div class="stats">
+          <div class="stat"><b>$0</b><span>cost to seniors</span></div>
+          <div class="stat"><b data-event-count>0</b><span>events this year</span></div>
+          <div class="stat"><b>1</b><span>huge night</span></div>
+        </div>
+      </div>
+      <div class="ruler-card reveal">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <h3 style="margin:0;font-size:1.3rem;letter-spacing:-.02em">Road to $100K</h3>
+          <span class="mono muted" style="font-size:.8rem"><span data-togo>$0</span> to go</span>
+        </div>
+        <div class="ruler-wrap" data-ruler>
+          <div class="ruler-pin" style="left:0">we're here!</div>
+          <div class="ruler" role="progressbar" aria-label="Fundraising progress" aria-valuemin="0" aria-valuemax="100"><div class="ruler-fill"></div></div>
+          <div class="ruler-labels"><span>$0</span><span>$25K</span><span>$50K</span><span>$75K</span><span>$100K</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== ABOUT ============================== -->
+  <section class="section bg-white" id="about" aria-labelledby="about-title">
+    <div class="wrap about-grid">
+      <div class="notebook reveal">
+        <h2 id="about-title">What is <span class="hl">Project Graduation</span>?</h2>
+        <p>Project Graduation is a parent- and community-run program that throws Hillsborough High's seniors one last party: a <span class="scribble">supervised, substance-free, all-night celebration</span> right after commencement.</p>
+        <p>It's free for every senior, so the whole class can be there together. That takes about <span class="circled">$100,000</span>, which we raise all year through hackathons, fundraisers, sponsors, and a lot of volunteers.</p>
+        <p class="muted">Seniors: the theme is top secret. Don't ask.</p>
+        <span class="anno" style="right:28px;top:118px">safe + legendary ✓</span>
+        <span class="anno" style="right:60px;bottom:28px">← our whole goal!</span>
+      </div>
+      <div class="about-mascot">
+        <div class="sticker-wrap" data-sticker="mascot" style="--r:-3deg; --boil:1.6s"></div>
+        <p class="hand" style="font-size:1.6rem;color:var(--maroon);text-align:center;margin:10px 0 0;transform:rotate(-3deg)">our mascot takes grad night very seriously.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== WAYS TO HELP ============================== -->
+  <section class="section" id="help" aria-labelledby="help-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 class="section-title" id="help-title"><span class="hl-box">Get involved.</span> <span class="muted">Three ways to make grad night happen.</span></h2>
+      </div>
+      <div class="help-grid">
+        <article class="help-card hover-boil reveal">
+          <div data-sticker="heart" data-still></div>
+          <span class="num">01 / volunteer</span>
+          <h3>Lend a hand</h3>
+          <p>Wrap gifts, run a booth, or help set up the big night. Students can earn service hours too.</p>
+          <a class="link-arrow" href="events.html?type=volunteer">See volunteer shifts →</a>
+        </article>
+        <article class="help-card hover-boil reveal">
+          <div data-sticker="burst" data-text="$" data-size="92" data-still></div>
+          <span class="num">02 / donate</span>
+          <h3>Chip in</h3>
+          <p>Gifts of every size add up. $25 covers a senior's dinner on grad night.</p>
+          <a class="link-arrow" href="#donate">Make a donation →</a>
+        </article>
+        <article class="help-card hover-boil reveal">
+          <div data-sticker="badge" data-still></div>
+          <span class="num">03 / sponsor</span>
+          <h3>Back the class</h3>
+          <p>Own a local business? Put your logo in front of HHS families all year long and back a great cause.</p>
+          <a class="link-arrow" href="sponsor.html">Become a sponsor →</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== DONATE BAND ============================== -->
+  <section id="donate" aria-labelledby="donate-title">
+    <div class="band on-dark">
+      <p class="eyebrow">// make it happen</p>
+      <h2 id="donate-title">Every senior deserves a <span class="hl">legendary</span> last night together.</h2>
+      <p>Your gift covers tickets, food, rides, and prizes for the whole class, including students who couldn't otherwise come.</p>
+      <div class="tiers" role="group" aria-label="Donation amount">
+        <button class="tier" data-amount="25" aria-pressed="false"><b>$25</b><span>a senior's dinner</span></button>
+        <button class="tier" data-amount="50" aria-pressed="true"><b>$50</b><span>a ride there & back</span></button>
+        <button class="tier" data-amount="100" aria-pressed="false"><b>$100</b><span>a raffle prize</span></button>
+        <button class="tier" data-amount="250" aria-pressed="false"><b>$250</b><span>a whole table</span></button>
+        <button class="tier" data-amount="custom" aria-pressed="false"><b>Other</b><span>any amount helps</span></button>
+      </div>
+      <div class="hero-ctas">
+        <a class="btn btn-gold" data-donate href="#">Give $50 <span class="arrow">→</span></a>
+        <a class="btn btn-ghost" href="sponsor.html">Become a sponsor</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== SPONSORS ============================== -->
+  <section class="section" id="sponsors" aria-labelledby="sp-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 class="section-title" id="sp-title"><span class="hl-box">Sponsors.</span> <span class="muted">The neighbors who make it happen.</span></h2>
+        <a class="btn btn-maroon" href="sponsor.html">Become a sponsor <span class="arrow">→</span></a>
+      </div>
+      <div class="sponsor-grid" data-sponsor-grid></div>
+    </div>
+  </section>
+
+  <!-- ============================== FAQ ============================== -->
+  <section class="section-tight" id="faq" aria-labelledby="faq-title">
+    <div class="wrap">
+      <div class="section-head"><h2 class="section-title" id="faq-title"><span class="hl-box">Questions?</span> <span class="muted">We've got answers.</span></h2></div>
+      <div class="faq">
+        <details><summary>Who can go to grad night?</summary><p>Every graduating Hillsborough High senior. It's a closed, supervised event, so guests from outside the class can't attend.</p></details>
+        <details><summary>Is it really free for seniors?</summary><p>Yes. Everything we raise during the year pays for the night, so no senior has to buy a ticket.</p></details>
+        <details><summary>Where does the money go?</summary><p>Venue, food, transportation, entertainment, security, and prizes. Our parent committee reviews the budget and shares it at info nights.</p></details>
+        <details><summary>Can volunteering count toward service hours?</summary><p>Most volunteer shifts count. Sign up through the events page and check in with the shift lead on the day so your hours get logged.</p></details>
+        <details><summary>I registered for an event. What now?</summary><p>Keep your ticket code handy. We'll email a reminder before the event with everything you need to know.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== FOOTER ============================== -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <img class="wm" src="assets/wordmark-hhs-dark.png" alt="Project Graduation Hillsborough">
+          <p style="max-width:34ch;margin:0">One safe, all-night celebration for the graduating class, made possible by families, staff, and neighbors.</p>
+        </div>
+        <div><h4>Explore</h4><ul><li><a href="events.html">Events</a></li><li><a href="index.html#about">About</a></li><li><a href="index.html#faq">FAQ</a></li></ul></div>
+        <div><h4>Help out</h4><ul><li><a href="events.html?type=volunteer">Volunteer</a></li><li><a href="index.html#donate">Donate</a></li><li><a href="sponsor.html">Become a sponsor</a></li></ul></div>
+        <div><h4>Contact</h4><ul><li><a href="mailto:hello@hhsprojectgrad.org">hello@hhsprojectgrad.org</a></li><li><a href="https://instagram.com/" rel="noopener">Instagram</a></li></ul></div>
+      </div>
+      <div class="fine"><span>© <span data-year>2027</span> Project Graduation · Hillsborough High School</span><span class="mono">made with ♥ by the class of '27 community</span></div>
+    </div>
+  </footer>
+
+  <dialog class="reg" aria-labelledby="reg-title">
+    <button class="reg-close" data-close aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3 3 13"/></svg></button>
+    <div class="reg-inner"></div>
+  </dialog>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/stickers.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

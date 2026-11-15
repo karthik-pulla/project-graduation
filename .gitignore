@@ -1,0 +1,9 @@
+# server data: admin password, registrations, sponsor applications
+website/.data/
+.data/
+
+# local tooling / OS
+.claude/
+.DS_Store
+__pycache__/
+*.pyc

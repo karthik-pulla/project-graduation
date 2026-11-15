@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Events · Project Graduation</title>
+  <meta name="description" content="Hackathons, volunteer shifts, fundraisers, and info nights that fund Hillsborough High's grad night. Register in a minute.">
+  <meta name="theme-color" content="#121114">
+  <link rel="icon" href="assets/mark-maroon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap">
+      <span>Class of <span data-year>2027</span>: grad night is free for every senior.</span>
+      <span class="sep">|</span>
+      <a href="index.html#donate">Donate →</a>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Main">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="assets/mark-white.png" alt="">
+        <span>Project Graduation<small>Hillsborough High</small></span>
+      </a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <ul class="nav-links">
+        <li><a href="events.html" aria-current="page">Events</a></li>
+        <li><a href="index.html#help">Get involved</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="sponsor.html">Sponsor</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a class="btn btn-sm btn-gold" href="index.html#donate">Donate</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero compact on-dark">
+    <div class="wrap hero-inner">
+      <div>
+        <p class="eyebrow">// <span data-event-count>0</span> events · <span data-year>2027</span> season</p>
+        <h1>Events</h1>
+        <p class="lede">Every ticket, shift, and hackathon entry <span class="hl">funds grad night</span>. Pick one and save your spot in under a minute.</p>
+      </div>
+      <aside class="hero-side">
+        <p class="tagline">Show up.<br>Sign up.<br><span class="hl">Help out.</span></p>
+      </aside>
+    </div>
+    <div class="sticker-wrap s-cap"    data-sticker="cap"    style="--r:-14deg; --delay:.1s"></div>
+    <div class="sticker-wrap s-burst"  data-sticker="star"   style="--r:12deg;  --delay:.25s; width:84px"></div>
+    <div class="sticker-wrap s-eyes"   data-sticker="code"   style="--r:-6deg;  --delay:.4s; width:104px"></div>
+    <div class="sticker-wrap s-pencil" data-sticker="ticket" style="--r:6deg;   --delay:.55s; width:120px"></div>
+    <div class="sticker-wrap s-mascot" data-sticker="mascot" style="--r:4deg;   --delay:.7s; --boil:1.5s"></div>
+    <svg class="tear" viewBox="0 0 1440 130" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <polygon fill="url(#pg-htg)" points="0,40 140,58 260,28 380,52 470,36 600,70 720,44 820,62 960,30 1080,56 1180,40 1300,70 1440,44 1440,66 1300,92 1180,62 1080,78 960,52 820,84 720,66 600,92 470,58 380,74 260,50 140,80 0,62"/>
+      <polyline fill="none" stroke="#ccb179" stroke-width="3" stroke-linejoin="round" points="0,40 140,58 260,28 380,52 470,36 600,70 720,44 820,62 960,30 1080,56 1180,40 1300,70 1440,44"/>
+      <polygon style="fill:var(--paper)" points="0,62 140,80 260,50 380,74 470,58 600,92 720,66 820,84 960,52 1080,78 1180,62 1300,92 1440,66 1440,130 0,130"/>
+    </svg>
+  </header>
+
+  <main class="section-tight">
+    <div class="wrap">
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filter events">
+          <button class="chip" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" data-filter="hackathon" aria-pressed="false"><span class="dot"></span>Hackathons</button>
+          <button class="chip" data-filter="volunteer" aria-pressed="false"><span class="dot"></span>Volunteer</button>
+          <button class="chip" data-filter="fundraiser" aria-pressed="false"><span class="dot"></span>Fundraisers</button>
+          <button class="chip" data-filter="community" aria-pressed="false"><span class="dot"></span>Community</button>
+        </div>
+        <label class="search">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+          <span class="sr-only">Search events</span>
+          <input type="search" placeholder="Search events" data-search>
+        </label>
+      </div>
+      <div class="elist" data-event-list></div>
+
+      <div class="band on-dark" style="margin:72px 0 0">
+        <p class="eyebrow">// host something</p>
+        <h2 style="max-width:18ch">Got an idea for a <span class="hl">fundraiser</span>?</h2>
+        <p>Clubs, teams, and families run some of our best events. Pitch yours and we'll help with the planning, promo, and sign-ups.</p>
+        <a class="btn btn-gold" href="mailto:hello@hhsprojectgrad.org?subject=Event%20idea">Pitch an event <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <img class="wm" src="assets/wordmark-hhs-dark.png" alt="Project Graduation Hillsborough">
+          <p style="max-width:34ch;margin:0">One safe, all-night celebration for the graduating class, made possible by families, staff, and neighbors.</p>
+        </div>
+        <div><h4>Explore</h4><ul><li><a href="events.html">Events</a></li><li><a href="index.html#about">About</a></li><li><a href="index.html#faq">FAQ</a></li></ul></div>
+        <div><h4>Help out</h4><ul><li><a href="events.html?type=volunteer">Volunteer</a></li><li><a href="index.html#donate">Donate</a></li><li><a href="sponsor.html">Become a sponsor</a></li></ul></div>
+        <div><h4>Contact</h4><ul><li><a href="mailto:hello@hhsprojectgrad.org">hello@hhsprojectgrad.org</a></li><li><a href="https://instagram.com/" rel="noopener">Instagram</a></li></ul></div>
+      </div>
+      <div class="fine"><span>© <span data-year>2027</span> Project Graduation · Hillsborough High School</span><span class="mono">made with ♥ by the class of '27 community</span></div>
+    </div>
+  </footer>
+
+  <dialog class="reg" aria-labelledby="reg-title">
+    <button class="reg-close" data-close aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3 3 13"/></svg></button>
+    <div class="reg-inner"></div>
+  </dialog>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/stickers.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
