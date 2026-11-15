@@ -27,6 +27,8 @@
     });
     const out = await r.json().catch(() => ({}));
     if (r.status === 401 && path !== "/api/admin/login") { signOut(true); throw new Error("Your session expired. Sign in again."); }
+    // static hosting (e.g. GitHub Pages) has no API: say so plainly
+    if (!r.ok && !out.error && [404, 405, 501].includes(r.status)) throw new Error("NO_SERVER");
     if (!r.ok) throw new Error(out.error || `Request failed (${r.status})`);
     return out;
   }
@@ -53,8 +55,8 @@
       TOKEN = token; try { sessionStorage.setItem("pg-admin", token); } catch {}
       e.target.reset(); await start();
     } catch (x) {
-      err.textContent = /fetch|NetworkError/i.test(x.message) || /404/.test(x.message)
-        ? "Can't reach the server. The admin console needs server.py running (see README)."
+      err.textContent = /fetch|NetworkError|NO_SERVER/i.test(x.message)
+        ? "The admin console isn't available on this copy of the site. It needs server.py running (see README)."
         : x.message;
     } finally { btn.disabled = false; }
   });
