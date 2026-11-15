@@ -157,7 +157,7 @@
         </div>
       </article>`;
     }).join("") + `<article class="ecard theme-light" style="justify-content:center;align-items:flex-start">
-        <div class="tag">// ${EVENTS.length} on the calendar</div>
+        <div class="tag">${EVENTS.length} on the calendar</div>
         <h3>See every event.</h3>
         <p class="muted">Hackathons, volunteer shifts, fundraisers, and info nights, all in one place.</p>
         <div class="art"><div data-sticker="plane" data-still class="hover-boil"></div></div>
@@ -256,7 +256,7 @@
         ${extra}
         <label class="check"><input type="checkbox" name="updates" checked> Send me updates about Project Graduation events.</label>
         <button class="btn btn-maroon" type="submit" style="justify-content:center">Save my spot <span class="arrow">→</span></button>
-        <p class="form-note">${API ? "we only use your email for this event" : "demo mode · saved in this browser only"}</p>
+        <p class="form-note">${API ? 'By registering you agree to our <a href="terms.html" target="_blank">terms</a> and <a href="privacy.html" target="_blank">privacy policy</a>.' : "demo mode · saved in this browser only"}</p>
       </form>`;
     PGStickers.mount(dlg);
     const role = $("#f-role", dlg), grade = $("[data-grade]", dlg);
@@ -293,12 +293,12 @@
       <div class="ticket-wrap">
         <div data-sticker="burst" data-text="YES!" data-size="44"></div>
         <h2>You're <span class="hl">${waitlist ? "on the waitlist" : "on the list"}</span>, ${esc(data.first)}.</h2>
-        <p class="muted">${waitlist ? "We'll email you if a spot opens up." : "Screenshot this ticket, then you're all set."}</p>
+        <p class="muted">${waitlist ? "We'll email you if a spot opens up." : SITE.mailOn ? `A confirmation is on its way to ${esc(data.email)}.` : "Screenshot this ticket, then you're all set."}</p>
         <div class="ticket">
           <div><div class="t-title">${esc(ev.title)}</div><div class="t-meta">${fmt.day(ev.start)} · ${fmt.time(ev.start)}<br>${esc(ev.location)}</div></div>
           <div class="code"><span>Ticket</span><b>${code}</b></div>
         </div>
-        <button class="btn" data-close>Done</button>
+        ${ev.payUrl && !waitlist && /^https:\/\//.test(ev.payUrl) ? `<a class="btn btn-maroon" href="${esc(ev.payUrl)}" target="_blank" rel="noopener">Pay ${esc(ev.price)} now <span class="arrow">→</span></a> ` : ""}<button class="btn ${ev.payUrl ? "btn-ghost" : ""}" data-close>Done</button>
       </div>`;
     PGStickers.mount(dlg);
     observeAll(dlg);

@@ -19,7 +19,7 @@
   let TOKEN = null;
   try { TOKEN = sessionStorage.getItem("pg-admin"); } catch {}
   let DB = null;
-  const ui = { sponsorFilter: "all", regEvent: "all", regQuery: "", volFilter: "all", ideaFilter: "all" };
+  const ui = { sponsorFilter: "all", regEvent: "all", regQuery: "", volFilter: "all", ideaFilter: "all", attEvent: "", composeAud: [] };
 
   /* ---------------- api ---------------- */
   async function api(method, path, body) {
@@ -71,7 +71,7 @@
   }
 
   /* ---------------- routing ---------------- */
-  const VIEWS = { overview, fundraising, events, registrations, sponsors, volunteers, ideas };
+  const VIEWS = { overview, fundraising, events, registrations, sponsors, volunteers, ideas, attendance, messages };
   function route() {
     const tab = (location.hash.slice(1).split("?")[0]) || "overview";
     const view = VIEWS[tab] || overview;
@@ -94,7 +94,7 @@
     route();
   });
 
-  const head = (eyebrow, title, actions = "") => `<header class="pane-head"><div><p class="eyebrow">// ${eyebrow}</p><h1>${title}</h1></div><div class="pane-actions">${actions}</div></header>`;
+  const head = (eyebrow, title, actions = "") => `<header class="pane-head"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div><div class="pane-actions">${actions}</div></header>`;
   const regCount = (id) => DB.registrations.filter((r) => r.eventId === id).length + DB.signups.filter((x) => x.eventId === id).length;
   const taken = (e) => (e.registered || 0) + regCount(e.id);
 
@@ -188,7 +188,7 @@
     e = e || { title: "", category: "fundraiser", theme: "light", tag: "New", start: "", end: "", location: "", price: "Free", capacity: 50, registered: 0, blurb: "", extra: [], shifts: [], ...(prefill || {}) };
     const d = $("[data-drawer]");
     d.innerHTML = `<form class="drawer-body" data-event-form>
-      <header><p class="eyebrow">// ${isNew ? "new event" : "edit event"}</p><h2 id="drawer-title">${isNew ? "Add an event" : esc(e.title)}</h2>
+      <header><p class="eyebrow">${isNew ? "new event" : "edit event"}</p><h2 id="drawer-title">${isNew ? "Add an event" : esc(e.title)}</h2>
         <button type="button" class="icon-btn" data-close-drawer aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l10 10M13 3 3 13"/></svg></button></header>
       <label class="field"><span>Title</span><input name="title" required maxlength="120" value="${esc(e.title)}"></label>
       <div class="row2">
@@ -205,6 +205,7 @@
         <label class="field"><span>Capacity</span><input name="capacity" type="number" min="1" required value="${e.capacity}"></label>
         <label class="field"><span>Signed up offline</span><input name="registered" type="number" min="0" value="${e.registered || 0}" title="People who registered outside the website (paper, Venmo, etc.)"></label>
       </div>
+      <label class="field"><span>Payment link <em class="muted">(optional: Zeffy, Givebutter, Stripe…)</em></span><input name="payUrl" type="url" value="${esc(e.payUrl || "")}" placeholder="https://"></label>
       <label class="field"><span>Tag on card</span><input name="tag" maxlength="24" value="${esc(e.tag)}" placeholder="New, Featured, Big night…"></label>
       <label class="field"><span>Description</span><textarea name="blurb" rows="3" maxlength="400">${esc(e.blurb)}</textarea></label>
       <fieldset class="field"><legend>Extra sign-up questions</legend><div class="pills">${Object.entries(EXTRAS).map(([k, v]) => `<label><input type="checkbox" name="extra" value="${k}" ${e.extra.includes(k) ? "checked" : ""}><span>${v}</span></label>`).join("")}</div></fieldset>
@@ -306,19 +307,20 @@
           <div class="sp-main">
             <div><h3>${esc(v.first)} ${esc(v.last)} ${v.status === "pending" ? '<span class="badge fundraiser">needs approval</span>' : ""}</h3>
               <p class="muted"><a href="mailto:${esc(v.email)}">${esc(v.email)}</a>${v.phone ? ` · ${esc(v.phone)}` : ""} · ${esc(v.role || "—")}${v.grade ? `, grade ${esc(v.grade)}` : ""}</p></div>
-            <div class="sp-tier"><b>${v.hours || 0} hrs</b><small>joined ${ago(v.at)}</small></div>
+            <div class="sp-tier"><b>${v.totalHours ?? v.hours ?? 0} hrs</b><small>joined ${ago(v.at)}</small></div>
           </div>
           <dl class="sp-facts">
             <div><dt>Likes</dt><dd>${esc((v.interests || []).join(", ") || "—")}</dd></div>
             <div><dt>Free</dt><dd>${esc((v.availability || []).join(", ") || "—")}</dd></div>
             ${v.guardianEmail ? `<div><dt>Guardian</dt><dd><a href="mailto:${esc(v.guardianEmail)}">${esc(v.guardianEmail)}</a></dd></div>` : ""}
+            <div><dt>Emergency contact</dt><dd>${esc([v.emergencyName, v.emergencyPhone].filter(Boolean).join(" · ") || "—")}</dd></div>
             <div><dt>Shirt · hours form</dt><dd>${esc(v.shirt || "—")} · ${esc(v.serviceHours || "—")}</dd></div>
             ${v.message ? `<div><dt>Notes from them</dt><dd>${esc(v.message)}</dd></div>` : ""}
-            <div><dt>Shifts</dt><dd>${sh.length ? sh.map((x) => `<span class="shift-tag">${esc(x.ev.title)} · ${esc(x.shift)} <button class="x" data-del-signup="${x.id}" aria-label="Remove from shift" title="Remove">×</button></span>`).join("") : "none yet"}</dd></div>
+            <div><dt>Shifts</dt><dd>${sh.length ? sh.map((x) => `<span class="shift-tag ${x.status || "booked"}">${x.status === "attended" ? "✓ " : x.status === "no-show" ? "✗ " : ""}${esc(x.ev.title)} · ${esc(x.shift)} <button class="x" data-del-signup="${x.id}" aria-label="Remove from shift" title="Remove">×</button></span>`).join("") : "none yet"}</dd></div>
           </dl>
           <div class="sp-controls">
             <label class="field inline"><span>Status</span><select data-vol-status>${Object.entries(VSTATUS).map(([k, l]) => `<option value="${k}" ${v.status === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-            <label class="field inline hours"><span>Service hours</span><input data-vol-hours type="number" min="0" step="0.25" value="${v.hours || 0}"></label>
+            <label class="field inline hours" title="Hours from attended shifts are added automatically. Use this for anything extra."><span>Extra hours</span><input data-vol-hours type="number" min="0" step="0.25" value="${v.hours || 0}"></label>
             <label class="field grow"><span>Notes</span><input data-vol-notes value="${esc(v.notes)}" placeholder="Great with check-in…"></label>
             <button class="btn btn-sm btn-ghost" data-vol-reset title="Give them a temporary password">Reset password</button>
             <button class="icon-btn" data-vol-del aria-label="Delete volunteer" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg></button>
@@ -360,8 +362,135 @@
         </article>`).join("") || `<section class="card empty-card"><div data-sticker="plane" data-still></div><p>${all.length ? "No ideas with this status." : "No pitches yet. The pitch form lives on the Events and Get involved pages."}</p></section>`}</div>`;
   }
 
+
+  /* ---------------- attendance ---------------- */
+  const shiftsOfEvent = (e) => (e.shifts && e.shifts.length ? e.shifts : ["Whole event"]);
+  function attendance() {
+    const volEvents = DB.events.filter((e) => e.category === "volunteer").sort((a, b) => new Date(a.start) - new Date(b.start));
+    if (!volEvents.length) return head("attendance", "Attendance") + `<section class="card empty-card"><div data-sticker="heart" data-still></div><p>No volunteer events yet. Add one in Events with the type “Volunteer”.</p></section>`;
+    if (!volEvents.some((e) => e.id === ui.attEvent)) ui.attEvent = (volEvents.find((e) => new Date(e.end) > new Date()) || volEvents[volEvents.length - 1]).id;
+    const ev = volEvents.find((e) => e.id === ui.attEvent);
+    const vols = Object.fromEntries(DB.volunteers.map((v) => [v.id, v]));
+    const ups = DB.signups.filter((x) => x.eventId === ev.id);
+    const n = (st) => ups.filter((x) => (x.status || "booked") === st).length;
+    const hrs = ups.filter((x) => x.status === "attended").reduce((t, x) => t + (+x.hours || 0), 0);
+    return head("attendance", "Attendance", `<button class="btn btn-ghost" data-att-msg ${ups.length ? "" : "disabled"}>Message these volunteers</button><button class="btn btn-ghost" data-att-csv ${ups.length ? "" : "disabled"}>Export CSV</button>`) + `
+      <div class="toolbar">
+        <select class="select" data-att-event aria-label="Volunteer event">${volEvents.map((e) => `<option value="${e.id}" ${e.id === ev.id ? "selected" : ""}>${esc(e.title)} · ${day(e.start)}</option>`).join("")}</select>
+        <div class="att-sum"><span><b>${ups.length}</b> booked</span><span><b>${n("attended")}</b> attended</span><span><b>${n("no-show")}</b> no-show</span><span><b>${hrs}</b> hours logged</span></div>
+      </div>
+      ${shiftsOfEvent(ev).map((sh) => {
+        const rows = ups.filter((x) => x.shift === sh);
+        return `<section class="card flush att-shift"><header class="att-head"><h2>${esc(sh)}</h2><span class="muted small">${rows.length} volunteer${rows.length === 1 ? "" : "s"}</span>${rows.length ? `<button class="btn btn-sm btn-ghost" data-att-all="${esc(sh)}">Mark all attended</button>` : ""}</header>
+          ${rows.length ? `<table class="table"><thead><tr><th>Volunteer</th><th>Contact</th><th>Attendance</th><th>Hours</th></tr></thead><tbody>${rows.map((x) => {
+            const v = vols[x.volunteerId] || {}; const st = x.status || "booked";
+            return `<tr data-signup="${x.id}"><td><b>${esc(v.first)} ${esc(v.last)}</b><small>${esc(v.role || "")}${v.grade ? `, grade ${esc(v.grade)}` : ""}</small></td>
+              <td><small>${esc(v.phone || "")}<br>Emergency: ${esc([v.emergencyName, v.emergencyPhone].filter(Boolean).join(" · ") || "—")}</small></td>
+              <td><div class="seg" role="group" aria-label="Attendance">${[["booked", "Booked"], ["attended", "Attended"], ["no-show", "No-show"]].map(([k, l]) => `<button class="seg-btn ${k}" data-att="${k}" aria-pressed="${st === k}">${l}</button>`).join("")}</div></td>
+              <td><input class="hrs" data-att-hours type="number" min="0" max="24" step="0.25" value="${x.hours ?? ""}" ${st === "attended" ? "" : "disabled"} aria-label="Hours"></td></tr>`;
+          }).join("")}</tbody></table>` : `<p class="empty-note" style="padding:0 20px 16px">Nobody booked yet.</p>`}</section>`;
+      }).join("")}`;
+  }
+
+  /* ---------------- messages (meeting notices & announcements) ---------------- */
+  function audiences() {
+    const list = [
+      ["volunteers:approved", "Approved volunteers", DB.volunteers.filter((v) => v.status === "approved").length],
+      ["volunteers:pending", "Volunteers waiting for approval", DB.volunteers.filter((v) => v.status === "pending").length],
+      ["sponsors:confirmed", "Confirmed sponsors", DB.sponsors.filter((x) => x.status === "confirmed").length],
+    ];
+    DB.events.slice().sort((a, b) => new Date(a.start) - new Date(b.start)).forEach((e) => {
+      if (e.category === "volunteer") list.push([`volunteers:event:${e.id}`, `Volunteers on ${e.title}`, new Set(DB.signups.filter((x) => x.eventId === e.id).map((x) => x.volunteerId)).size]);
+      else list.push([`registrants:event:${e.id}`, `People registered for ${e.title}`, DB.registrations.filter((r) => r.eventId === e.id).length]);
+    });
+    return list;
+  }
+  function messages() {
+    const auds = audiences(), label = Object.fromEntries(auds.map(([k, l]) => [k, l]));
+    const mail = DB.mail || {};
+    const hist = DB.announcements.slice().sort((a, b) => new Date(b.at) - new Date(a.at));
+    const status = (a) => a.email?.skipped ? `<span class="badge">${a.email.skipped === "email turned off" ? "portal only" : "email not sent: " + esc(a.email.skipped)}</span>` : a.email?.failed ? `<span class="badge community">${a.email.sent} sent · ${a.email.failed} failed</span>` : `<span class="badge volunteer">${a.email?.sent ?? 0} emailed</span>`;
+    return head("messages", "Messages") + `
+      <section class="note-card ${mail.configured ? "approved" : "pending"}"><div data-sticker="${mail.configured ? "plane" : "eyes"}" data-still></div><div>
+        <h2>${mail.configured ? "Email is connected" : "Email isn't connected yet"}</h2>
+        <p>${mail.configured ? `Messages go out from <b>${esc(mail.from)}</b>. Volunteers also see them in their portal.` : "Messages still show up in the volunteer portal right away. To email them too, connect a free SMTP account (Gmail or Brevo). Steps are in the README under “Email”."}</p></div></section>
+      <form class="card form-grid" data-compose>
+        <h2 class="span2">New message</h2>
+        <fieldset class="field span2"><legend>Type</legend><div class="pills">
+          <label><input type="radio" name="kind" value="meeting" checked><span>📅 Meeting notice</span></label>
+          <label><input type="radio" name="kind" value="announcement"><span>📣 Announcement</span></label></div></fieldset>
+        <label class="field span2"><span>Title</span><input name="title" required maxlength="140" placeholder="Grad night planning meeting"></label>
+        <label class="field" data-meeting><span>Starts</span><input name="when" type="datetime-local"></label>
+        <label class="field" data-meeting><span>Ends <em class="muted">(optional)</em></span><input name="end" type="datetime-local"></label>
+        <label class="field span2"><span>Where <em class="muted">(room, address, or video link)</em></span><input name="where" maxlength="200" placeholder="HHS Library, Room 112 · or https://meet.google.com/…"></label>
+        <label class="field span2"><span>Message</span><textarea name="body" rows="5" maxlength="4000" placeholder="Agenda, what to bring, who to ask…"></textarea></label>
+        <fieldset class="field span2"><legend>Send to</legend><div class="pills aud-pills">${auds.map(([k, l, n]) => `<label><input type="checkbox" name="aud" value="${k}" ${ui.composeAud.includes(k) ? "checked" : ""} ${n ? "" : "disabled"}><span>${esc(l)} <em>${n}</em></span></label>`).join("")}</div></fieldset>
+        <label class="check span2"><input type="checkbox" name="sendEmail" checked> Email it too${mail.configured ? "" : " (will be skipped until email is connected)"}. Meetings include a calendar invite.</label>
+        <p class="login-error span2" data-compose-error role="alert"></p>
+        <div class="span2 form-actions"><button class="btn btn-maroon" type="submit">Send message <span class="arrow">→</span></button><span class="muted small">Each person gets their own email, so addresses stay private.</span></div>
+      </form>
+      <section class="card"><h2>Sent</h2>
+        ${hist.length ? hist.map((a) => `<div class="msg-row" data-ann="${a.id}">
+          <div class="msg-kind">${a.kind === "meeting" ? "📅" : "📣"}</div>
+          <div class="grow"><b>${esc(a.title)}</b><small>${a.when ? esc(dayTime(a.when)) + (a.where ? " · " + esc(a.where) : "") + " · " : ""}to ${a.audiences.map((k) => esc(label[k] || k)).join(", ")} · ${a.recipients} people · ${ago(a.at)}</small></div>
+          ${status(a)}<button class="icon-btn" data-del-ann aria-label="Delete message" title="Delete from history and portal"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg></button></div>`).join("") : `<p class="empty-note">Nothing sent yet.</p>`}
+      </section>
+      <details class="card outbox"><summary><h2>Email log</h2><span class="muted small">every automatic and manual email, newest first</span></summary>
+        ${(DB.outbox || []).slice().reverse().slice(0, 60).map((o) => `<div class="log-row"><span class="mono small">${dayTime(o.at)}</span><span class="grow">${esc(o.subject)}</span><span class="small muted">${o.to} recipient${o.to === 1 ? "" : "s"}</span><span class="badge ${/^sent/.test(o.status) ? "volunteer" : /fail/.test(o.status) ? "community" : ""}">${esc(o.status)}</span></div>`).join("") || `<p class="empty-note">No emails yet.</p>`}
+      </details>`;
+  }
+
   /* ---------------- bindings per view ---------------- */
   const bind = {
+    attendance() {
+      const pane = $("[data-pane]");
+      const sel = $("[data-att-event]", pane); if (!sel) return;
+      sel.addEventListener("change", () => { ui.attEvent = sel.value; route(); });
+      const patchSignup = async (id, body) => {
+        const x = await api("PATCH", `/api/admin/signups/${id}`, body);
+        Object.assign(DB.signups.find((y) => y.id === id), x); return x;
+      };
+      pane.addEventListener("click", async (e) => {
+        const b = e.target.closest("[data-att]");
+        if (b) {
+          try { await patchSignup(b.closest("[data-signup]").dataset.signup, { status: b.dataset.att }); route(); toast(b.dataset.att === "attended" ? "Marked attended, hours added" : "Saved"); } catch (x) { toast(x.message, true); }
+        }
+        const all = e.target.closest("[data-att-all]");
+        if (all) {
+          const ids = DB.signups.filter((x) => x.eventId === ui.attEvent && x.shift === all.dataset.attAll && x.status !== "attended").map((x) => x.id);
+          try { for (const id of ids) await patchSignup(id, { status: "attended" }); route(); toast(`Marked ${ids.length} attended`); } catch (x) { toast(x.message, true); }
+        }
+        if (e.target.closest("[data-att-msg]")) { ui.composeAud = [`volunteers:event:${ui.attEvent}`]; location.hash = "#messages"; }
+        if (e.target.closest("[data-att-csv]")) {
+          const ev = DB.events.find((x) => x.id === ui.attEvent), vols = Object.fromEntries(DB.volunteers.map((v) => [v.id, v]));
+          csv(`attendance-${ev.id}.csv`, ["Event", "Shift", "First", "Last", "Email", "Phone", "Emergency contact", "Attendance", "Hours"],
+            DB.signups.filter((x) => x.eventId === ev.id).map((x) => { const v = vols[x.volunteerId] || {}; return [ev.title, x.shift, v.first, v.last, v.email, v.phone, [v.emergencyName, v.emergencyPhone].filter(Boolean).join(" "), x.status || "booked", x.hours ?? ""]; }));
+        }
+      });
+      pane.addEventListener("change", async (e) => {
+        if (!e.target.matches("[data-att-hours]")) return;
+        try { await patchSignup(e.target.closest("[data-signup]").dataset.signup, { hours: e.target.value }); toast("Hours saved"); } catch (x) { toast(x.message, true); }
+      });
+    },
+    messages() {
+      const pane = $("[data-pane]"), f = $("[data-compose]", pane);
+      const sync = () => $$("[data-meeting]", f).forEach((el) => (el.hidden = f.kind.value !== "meeting"));
+      f.addEventListener("change", sync); sync();
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fd = new FormData(f), err = $("[data-compose-error]", pane); err.textContent = "";
+        const body = { kind: fd.get("kind"), title: fd.get("title"), when: fd.get("when") ? fd.get("when") + ":00" : "", end: fd.get("end") ? fd.get("end") + ":00" : "",
+          where: fd.get("where"), body: fd.get("body"), audiences: fd.getAll("aud"), sendEmail: !!fd.get("sendEmail") };
+        const btn = f.querySelector("[type=submit]"); btn.disabled = true;
+        try { const a = await api("POST", "/api/admin/announcements", body); ui.composeAud = []; await refresh(); route(); toast(`Sent to ${a.recipients} people`); }
+        catch (x) { err.textContent = x.message; btn.disabled = false; }
+      });
+      pane.addEventListener("click", async (e) => {
+        const d = e.target.closest("[data-del-ann]"); if (!d) return;
+        if (!confirm("Delete this message from the history and from volunteers' portals? Emails already sent can't be unsent.")) return;
+        try { await api("DELETE", `/api/admin/announcements/${d.closest("[data-ann]").dataset.ann}`); await refresh(); route(); toast("Deleted"); } catch (x) { toast(x.message, true); }
+      });
+    },
     volunteers() {
       const pane = $("[data-pane]");
       const vidOf = (el) => el.closest("[data-vol]").dataset.vol;

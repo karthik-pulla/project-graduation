@@ -129,11 +129,14 @@ button { font: inherit; color: inherit; }
 .link-arrow:hover { text-decoration: underline; text-underline-offset: 3px; }
 .on-dark .link-arrow { color: var(--gold); }
 
+/* small accent labels: handwritten, like a note in the margin */
 .eyebrow {
-  font-family: var(--mono); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--muted);
+  font-family: var(--hand); font-size: 1.45rem; font-weight: 700; line-height: 1.1;
+  letter-spacing: 0; text-transform: none; color: var(--maroon);
+  display: inline-block; transform: rotate(-1.5deg); transform-origin: left center;
 }
-.on-dark .eyebrow { color: var(--muted-2); }
+.on-dark .eyebrow, .action-tile.dark .eyebrow, .reg-head .eyebrow, .band .eyebrow { color: var(--gold); }
+.help-card .num { font-family: var(--hand); font-size: 1.3rem; font-weight: 700; color: var(--maroon); letter-spacing: 0; }
 
 .chip {
   display: inline-flex; align-items: center; gap: .45em;
@@ -1110,7 +1113,7 @@ body[data-step="review"] .flow-stickers, body[data-step="tiers"] .fs-2 { opacity
 .action-tile:hover .tile-go { transform: translateX(4px); background: var(--gold); }
 .action-tile.dark { background: var(--ink); color: var(--white); }
 .action-tile.dark p { color: #bdbac2; }
-.action-tile.dark .eyebrow { color: var(--muted-2); }
+.action-tile.dark .eyebrow { color: var(--gold); }
 .action-tile.dark .tile-go { background: rgba(255,255,255,.08); color: var(--white); }
 .action-tile.dark:hover .tile-go { background: var(--gold); color: var(--ink); }
 .action-tile.dark::before {
@@ -1169,3 +1172,37 @@ a.help-card { text-decoration: none; color: inherit; }
 .vol-list .vol-row .cal .m { display: block; padding: 5px 0 4px; }
 .vol-list .vol-row .cal .d { font-size: 1.5rem; padding: 6px 0 0; line-height: 1; letter-spacing: -.04em; }
 .vol-list .vol-row .cal .w { padding: 3px 0 6px; line-height: 1.4; }
+.form-note a, .flow-consent a { color: inherit; }
+.flow-consent { font-size: .86rem; color: var(--muted); margin: 14px 0 0; }
+
+/* --------------------------------------------------------------------------
+   Legal pages
+   -------------------------------------------------------------------------- */
+.legal-hero { padding-bottom: 150px; }
+.legal-hero h1 { margin-bottom: 10px; }
+.legal-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 48px; align-items: start; }
+.legal-toc { position: sticky; top: 92px; }
+.legal-toc ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: .92rem; }
+.legal-toc a { text-decoration: none; color: var(--muted); }
+.legal-toc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.legal { background: var(--white); border-radius: var(--radius); padding: 40px 48px 48px; box-shadow: var(--shadow); max-width: 780px; font-size: 1.02rem; line-height: 1.7; }
+.legal .lead { font-size: 1.15rem; color: var(--ink); margin-top: 0; }
+.legal h2 { font-size: 1.35rem; letter-spacing: -.025em; margin: 34px 0 10px; scroll-margin-top: 90px; }
+.legal ul { padding-left: 1.2em; }
+.legal li { margin-bottom: 6px; }
+.legal a { color: var(--maroon); }
+.legal-date { font-family: var(--mono); font-size: .78rem; color: var(--muted); margin: 0 0 18px; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: .9rem; line-height: 1.45; margin: 10px 0; }
+.legal-table th, .legal-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.legal-table th { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+mark.fill { background: #fff1a8; color: inherit; padding: 0 .2em; border-radius: 3px; }
+.footer .legal-links { display: flex; gap: 16px; flex-wrap: wrap; }
+.footer .legal-links a { color: #8b8891; }
+.footer .legal-links a:hover { color: var(--white); }
+@media (max-width: 900px) {
+  .legal-wrap { grid-template-columns: 1fr; gap: 20px; }
+  .legal-toc { position: static; }
+  .legal-toc ul { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .legal { padding: 28px 22px 32px; }
+  .legal-table { display: block; overflow-x: auto; }
+}

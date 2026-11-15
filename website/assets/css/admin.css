@@ -278,3 +278,52 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
   .opp-top .grow { flex: 1 1 calc(100% - 72px); }
   .opp-top .spots { width: 100%; padding-left: 72px; margin-top: -4px; }
 }
+
+/* ---------- attendance ---------- */
+.att-sum { display: flex; gap: 8px; flex-wrap: wrap; }
+.att-sum span { background: var(--white); border-radius: 999px; padding: 7px 14px; font-size: .86rem; box-shadow: var(--shadow); }
+.att-shift { margin-bottom: 16px; }
+.att-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px 6px; }
+.att-head h2 { margin: 0; font-size: 1.05rem; }
+.att-head .btn { margin-left: auto; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg-btn { border: 0; background: var(--white); padding: 7px 11px; font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; color: var(--muted); }
+.seg-btn + .seg-btn { border-left: 1.5px solid var(--line); }
+.seg-btn:hover { background: var(--paper); color: var(--ink); }
+.seg-btn[aria-pressed="true"] { background: var(--ink); color: var(--white); }
+.seg-btn.attended[aria-pressed="true"] { background: #2b8a4b; }
+.seg-btn.no-show[aria-pressed="true"] { background: var(--maroon); }
+.hrs { width: 84px; font: inherit; padding: 7px 10px; border-radius: 9px; border: 1.5px solid var(--line); background: var(--paper); }
+.hrs:disabled { opacity: .4; }
+.shift-tag.attended { border-color: #b9dcc5; background: #eef7f1; }
+.shift-tag.no-show { border-color: #e8c4c4; background: #fbf0f0; text-decoration: line-through; text-decoration-color: rgba(128,0,0,.4); }
+
+/* ---------- messages ---------- */
+.note-card.approved { border-color: #9ccfb0; }
+.aud-pills span em { font-style: normal; font-family: var(--mono); font-size: .72rem; opacity: .6; margin-left: 4px; }
+.aud-pills input:disabled + span { opacity: .4; cursor: not-allowed; }
+.msg-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.msg-row:last-child { border: 0; }
+.msg-row b { display: block; }
+.msg-row small { color: var(--muted); font-size: .8rem; }
+.msg-kind { font-size: 1.4rem; width: 36px; text-align: center; flex: none; }
+.outbox summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; }
+.outbox summary::-webkit-details-marker { display: none; }
+.outbox summary h2 { margin: 0; }
+.outbox summary::after { content: "+"; margin-left: auto; font-family: var(--mono); font-size: 1.2rem; }
+.outbox[open] summary { margin-bottom: 12px; }
+.outbox[open] summary::after { content: "–"; }
+.log-row { display: flex; gap: 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+.log-row:last-child { border: 0; }
+.field legend { margin-bottom: 6px; }
+
+/* ---------- portal: messages + hours ---------- */
+.msg-card { border-left: 3px solid var(--gold); padding: 12px 16px; background: #fffdf8; border-radius: 0 12px 12px 0; margin-bottom: 12px; }
+.msg-card h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.msg-card .meta { font-size: .85rem; color: var(--muted); margin: 0 0 8px; }
+.msg-card p.body { margin: 0; white-space: pre-wrap; font-size: .93rem; }
+.msg-card .btn { margin-top: 10px; }
+.shift-row .att-badge { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 6px; background: var(--paper); color: var(--muted); }
+.shift-row .att-badge.attended { background: #e6f1ea; color: #2b6440; }
+.shift-row .att-badge.no-show { background: #f6e6e6; color: var(--maroon); }
+@media (max-width: 700px) { .att-head { flex-wrap: wrap; } .att-head .btn { margin-left: 0; } .msg-row { flex-wrap: wrap; } }

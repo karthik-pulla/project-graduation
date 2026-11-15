@@ -10,7 +10,8 @@ Data lives in .data/db.json, which is created from assets/js/data.js on first
 start and never served to the public. If ADMIN_PASSWORD isn't set, a random
 password is generated, saved in .data/admin_password.txt, and printed at startup.
 """
-import hashlib, hmac, json, os, re, secrets, threading, time, uuid, mimetypes
+import hashlib, hmac, html, json, os, re, secrets, threading, time, uuid, mimetypes
+import mailer
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -31,9 +32,10 @@ EXTRAS = {"team", "experience", "shirt", "shift", "guests"}
 SPONSOR_STATUS = {"new", "contacted", "confirmed", "declined"}
 IDEA_STATUS = {"new", "reviewing", "approved", "passed"}
 VOL_STATUS = {"pending", "approved", "inactive"}
+SIGNUP_STATUS = {"booked", "attended", "no-show"}
 WHOLE = "Whole event"
 
-lock = threading.Lock()
+lock = threading.RLock()  # re-entrant: email logging can run inside a locked request
 sessions = {}            # admin token -> expiry
 vsessions = {}           # volunteer token -> (volunteer id, expiry)
 failed = {}              # ip -> (count, first_ts)
@@ -56,7 +58,7 @@ def load_seed():
 def read_db():
     with open(DB_PATH, encoding="utf-8") as f:
         db = json.load(f)
-    for k in ("events", "registrations", "sponsors", "ideas", "volunteers", "signups"):
+    for k in ("events", "registrations", "sponsors", "ideas", "volunteers", "signups", "announcements", "outbox"):
         db.setdefault(k, [])
     return db
 
@@ -131,8 +133,59 @@ def check_pw(pw, stored):
 def strs(v, n=40, k=12):
     return [s(x, n) for x in v if s(x, n)][:k] if isinstance(v, list) else []
 
-def public_volunteer(v):
-    return {k: val for k, val in v.items() if k != "pw"}
+def public_volunteer(v, db=None):
+    out = {k: val for k, val in v.items() if k != "pw"}
+    if db is not None:
+        out["totalHours"] = vol_total(db, v)
+    return out
+
+def nice_dt(iso):
+    d = datetime.fromisoformat(iso)
+    return d.strftime("%a, %b ") + str(d.day) + " at " + d.strftime("%I:%M %p").lstrip("0")
+
+def shift_hours(ev, shift):
+    """Hours in a shift like '10:00 – 12:00' or '12:00 – 2:00'; whole event otherwise."""
+    m = re.findall(r"(\d{1,2}):(\d{2})", shift or "")
+    if len(m) >= 2:
+        a = int(m[0][0]) + int(m[0][1]) / 60
+        b = int(m[1][0]) + int(m[1][1]) / 60
+        while b <= a:
+            b += 12
+        return round((b - a) * 4) / 4
+    try:
+        span = (datetime.fromisoformat(ev["end"]) - datetime.fromisoformat(ev["start"])).total_seconds() / 3600
+        return max(0.25, round(span * 4) / 4)
+    except (KeyError, ValueError):
+        return 2.0
+
+def vol_total(db, v):
+    attended = sum(float(x.get("hours") or 0) for x in db["signups"] if x["volunteerId"] == v["id"] and x.get("status") == "attended")
+    return round((float(v.get("hours") or 0) + attended) * 100) / 100
+
+def notify(recipients, subject, text, body_html, invite=None, ann_id=None, kind="auto"):
+    """Send email (if set up) and keep a log the admin console can show."""
+    entry = {"id": uuid.uuid4().hex[:10], "at": now_iso(), "kind": kind, "subject": subject,
+             "to": len({r for r in recipients if r}), "status": "sending"}
+    with lock:
+        db = read_db(); db["outbox"] = (db["outbox"] + [entry])[-300:]; write_db(db)
+    def done(res):
+        with lock:
+            db = read_db()
+            for e in db["outbox"]:
+                if e["id"] == entry["id"]:
+                    e.update(sent=res["sent"], failed=len(res["failed"]),
+                             status="not sent: " + res["skipped"] if res["skipped"] else ("sent" if not res["failed"] else "partly failed"))
+            for a in db["announcements"]:
+                if a["id"] == ann_id:
+                    a["email"] = {"sent": res["sent"], "failed": len(res["failed"]), "skipped": res["skipped"]}
+            write_db(db)
+    mailer.send(recipients, subject, text, body_html, invite, done)
+
+def P(t):
+    return f"<p style='margin:0 0 12px'>{t}</p>"
+
+def E(t):
+    return html.escape(str(t or ""))
 
 def shifts_of(e):
     return e.get("shifts") or [WHOLE]
@@ -157,7 +210,7 @@ def public_view(db):
         events.append(pe)
     sponsors = [{"name": sp["displayName"] or sp["org"], "website": sp.get("website", ""), "tier": sp.get("tier", "")}
                 for sp in db["sponsors"] if sp.get("status") == "confirmed" and sp.get("showOnSite")]
-    return {"config": db["config"], "events": events, "sponsors": sponsors}
+    return {"config": db["config"], "events": events, "sponsors": sponsors, "mailOn": mailer.configured()}
 
 def clean_event(d, existing=None):
     e = dict(existing or {})
@@ -188,6 +241,10 @@ def clean_event(d, existing=None):
     e["extra"] = [x for x in extra if x in EXTRAS] if isinstance(extra, list) else []
     shifts = d.get("shifts", e.get("shifts", []))
     e["shifts"] = [s(x, 40) for x in shifts if s(x, 40)][:12] if isinstance(shifts, list) else []
+    pay = s(d.get("payUrl", e.get("payUrl", "")), 300)
+    if pay and not re.match(r"^https://\S+\.\S+", pay):
+        raise ValueError("Payment link must start with https://")
+    e["payUrl"] = pay
     if "shift" in e["extra"] and not e["shifts"]:
         e["extra"].remove("shift")
     return e
@@ -264,7 +321,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.error("Not signed in", 401)
             with lock:
                 db = read_db()
-            db["volunteers"] = [public_volunteer(v) for v in db["volunteers"]]
+            db["volunteers"] = [public_volunteer(v, db) for v in db["volunteers"]]
+            db["mail"] = {"configured": mailer.configured(), "from": mailer.FROM if mailer.configured() else ""}
             return self.send_json(db)
         if path == "/api/volunteer/me":
             vid = self.volunteer()
@@ -332,7 +390,18 @@ class Handler(BaseHTTPRequestHandler):
             m = re.fullmatch(r"/api/admin/volunteers/([\w-]+)(/reset-password)?", path)
             if m:
                 return self.volunteer_admin(method, m.group(1), bool(m.group(2)), data)
+            if method == "POST" and path == "/api/admin/announcements":
+                return self.announce(data)
+            m = re.fullmatch(r"/api/admin/announcements/([\w-]+)", path)
+            if m and method == "DELETE":
+                with lock:
+                    db = read_db()
+                    db["announcements"] = [a for a in db["announcements"] if a["id"] != m.group(1)]
+                    write_db(db)
+                return self.send_json({"ok": True})
             m = re.fullmatch(r"/api/admin/signups/([\w-]+)", path)
+            if m and method == "PATCH":
+                return self.attendance(m.group(1), data)
             if m and method == "DELETE":
                 with lock:
                     db = read_db()
@@ -381,6 +450,14 @@ class Handler(BaseHTTPRequestHandler):
             }
             db["registrations"].append(rec)
             write_db(db)
+        pay = ev.get("payUrl")
+        when = f"{nice_dt(ev['start'])} · {ev.get('location', '')}"
+        notify([email], f"{'Waitlist' if rec['waitlist'] else 'You are registered'}: {ev['title']}",
+               f"Hi {first},\n\nYou're {'on the waitlist' if rec['waitlist'] else 'registered'} for {ev['title']}.\n{when}\nTicket: {code}\n" + (f"\nPay here: {pay}\n" if pay else "") + "\nSee you there!\nProject Graduation",
+               mailer.page(f"You're {'on the waitlist' if rec['waitlist'] else 'in'}!", P(f"Hi {E(first)}, you're {'on the waitlist' if rec['waitlist'] else 'registered'} for <b>{E(ev['title'])}</b>.")
+                           + P(E(when)) + P(f"Ticket code: <b style='font-family:monospace'>{code}</b>") + (P(f"Price: {E(ev.get('price'))}") if ev.get("price") else ""),
+                           ("Pay now", pay) if pay else None),
+               mailer.ics(code, ev["title"], ev["start"], ev["end"], ev.get("location", ""), ev.get("blurb", "")))
         self.send_json({"ok": True, "code": code, "waitlist": rec["waitlist"]}, 201)
 
     def sponsor_apply(self, d):
@@ -402,6 +479,12 @@ class Handler(BaseHTTPRequestHandler):
             db = read_db()
             db["sponsors"].append(rec)
             write_db(db)
+        notify([email], "Thanks for supporting Project Graduation",
+               f"Hi {first},\n\nThanks for offering to sponsor Project Graduation. Someone from our team will reach out within a week.\n\nProject Graduation",
+               mailer.page("Thanks for backing the class!", P(f"Hi {E(first)}, thanks for offering to sponsor Project Graduation{(' on behalf of ' + E(org)) if org else ''}.") + P("Someone from our sponsor team will reach out within a week with next steps.")))
+        if mailer.ADMIN:
+            notify([mailer.ADMIN], f"New sponsor application: {org or first}", f"{first} {rec['last']} ({email}) applied to sponsor: {rec['tier']}.\nOpen the admin console to review.",
+                   mailer.page("New sponsor application", P(f"<b>{E(org or first)}</b> · {E(rec['tier'])}") + P(f"{E(first)} {E(rec['last'])} · {E(email)}"), ("Open admin console", mailer.SITE + "/admin.html#sponsors")), kind="alert")
         self.send_json({"ok": True, "id": rec["id"]}, 201)
 
     def login(self, d):
@@ -500,6 +583,11 @@ class Handler(BaseHTTPRequestHandler):
             db = read_db()
             db["ideas"].append(rec)
             write_db(db)
+        notify([email], "We got your event pitch", f"Hi {first},\n\nThanks for pitching \"{rec['eventName']}\". Our planning team reviews ideas every couple of weeks and will email you either way.\n\nProject Graduation",
+               mailer.page("Pitch received!", P(f"Hi {E(first)}, thanks for pitching <b>{E(rec['eventName'] or 'your event')}</b>.") + P("Our planning team reviews new ideas every couple of weeks. We'll email you either way.")))
+        if mailer.ADMIN:
+            notify([mailer.ADMIN], f"New event pitch: {rec['eventName'] or 'untitled'}", f"{first} {rec['last']} ({email}) pitched an event. Open the admin console to review.",
+                   mailer.page("New event pitch", P(f"<b>{E(rec['eventName'])}</b>") + P(E(rec['pitch'])), ("Open admin console", mailer.SITE + "/admin.html#ideas")), kind="alert")
         self.send_json({"ok": True, "id": rec["id"]}, 201)
 
     def idea_admin(self, method, iid, d):
@@ -551,6 +639,7 @@ class Handler(BaseHTTPRequestHandler):
             "role": role, "grade": s(d.get("grade"), 20), "guardianEmail": guardian,
             "interests": strs(d.get("interests")), "availability": strs(d.get("availability")),
             "shirt": s(d.get("shirt"), 5), "serviceHours": s(d.get("serviceHours"), 40),
+            "emergencyName": s(d.get("emergencyName"), 80), "emergencyPhone": s(d.get("emergencyPhone"), 30),
             "message": s(d.get("message"), 1200), "pw": hash_pw(pw),
         }
         with lock:
@@ -559,6 +648,16 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("That email already has a volunteer account. Try logging in.")
             db["volunteers"].append(rec)
             write_db(db)
+        notify([email], "Welcome to the Project Graduation crew",
+               f"Hi {first},\n\nThanks for registering to volunteer! An organizer will review your account, usually within a couple of days. You can log in to the volunteer portal any time: {mailer.SITE}/portal.html\n\nProject Graduation",
+               mailer.page("Welcome to the crew!", P(f"Hi {E(first)}, thanks for registering to volunteer.") + P("An organizer will review your account, usually within a couple of days. Once you're approved, you can pick shifts in the volunteer portal."), ("Open the volunteer portal", mailer.SITE + "/portal.html")))
+        if guardian:
+            notify([guardian], f"{first} signed up to volunteer with Project Graduation",
+                   f"Hello,\n\n{first} {last} registered to volunteer with Project Graduation at Hillsborough High School and listed you as their parent or guardian. If you have questions, reply to this email.\n\nProject Graduation",
+                   mailer.page("A student listed you as their guardian", P(f"Hello! <b>{E(first)} {E(last)}</b> registered to volunteer with Project Graduation at Hillsborough High School and listed you as their parent or guardian.") + P("Volunteers help run fundraisers for the senior class's grad night. If you have questions or concerns, just reply to this email."), ("Read our privacy policy", mailer.SITE + "/privacy.html")))
+        if mailer.ADMIN:
+            notify([mailer.ADMIN], f"New volunteer to approve: {first} {last}", f"{first} {last} ({email}) registered to volunteer. Approve them in the admin console.",
+                   mailer.page("New volunteer to approve", P(f"<b>{E(first)} {E(last)}</b> · {E(role)}") + P(E(email)), ("Review volunteers", mailer.SITE + "/admin.html#volunteers")), kind="alert")
         self.send_json({"ok": True}, 201)
 
     def volunteer_login(self, d):
@@ -594,7 +693,9 @@ class Handler(BaseHTTPRequestHandler):
         mine = [x | {"title": evs[x["eventId"]]["title"], "start": evs[x["eventId"]]["start"],
                      "end": evs[x["eventId"]]["end"], "location": evs[x["eventId"]]["location"]}
                 for x in db["signups"] if x["volunteerId"] == vid and x["eventId"] in evs]
-        self.send_json({"me": public_volunteer(v), "opportunities": opps, "signups": mine})
+        msgs = [{k: a[k] for k in ("id", "at", "kind", "title", "when", "end", "where", "body")}
+                for a in sorted(db["announcements"], key=lambda a: a["at"], reverse=True) if vid in a.get("volunteerIds", [])][:20]
+        self.send_json({"me": public_volunteer(v, db), "opportunities": opps, "signups": mine, "messages": msgs})
 
     def volunteer_route(self, method, path, d):
         vid = self.volunteer()
@@ -639,12 +740,17 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("You're already signed up for that shift")
                 if ev.get("registered", 0) + count_regs(db, ev["id"]) >= ev["capacity"]:
                     raise ValueError("That opportunity is full")
-                rec = {"id": uuid.uuid4().hex[:10], "volunteerId": vid, "eventId": ev["id"], "shift": shift, "at": now_iso()}
+                rec = {"id": uuid.uuid4().hex[:10], "volunteerId": vid, "eventId": ev["id"], "shift": shift, "at": now_iso(), "status": "booked", "hours": None}
                 db["signups"].append(rec)
                 write_db(db)
+                notify([v["email"]], f"Shift booked: {ev['title']}", f"Hi {v['first']},\n\nYou're signed up for {ev['title']} ({shift}) on {nice_dt(ev['start'])} at {ev.get('location', '')}.\nNeed to cancel? Use the volunteer portal: {mailer.SITE}/portal.html\n\nThank you!\nProject Graduation",
+                       mailer.page("You're on the schedule!", P(f"Hi {E(v['first'])}, you're signed up for <b>{E(ev['title'])}</b>.") + P(f"Shift: <b>{E(shift)}</b><br>{E(nice_dt(ev['start']))} · {E(ev.get('location', ''))}") + P("Need to cancel? You can do it from the portal, ideally two days ahead."), ("Open the volunteer portal", mailer.SITE + "/portal.html")),
+                       mailer.ics(rec["id"], f"Volunteer: {ev['title']} ({shift})", ev["start"], ev["end"], ev.get("location", ""), shift))
                 return self.send_json(rec, 201)
             m = re.fullmatch(r"/api/volunteer/signups/([\w-]+)", path)
             if method == "DELETE" and m:
+                if any(x["id"] == m.group(1) and x["volunteerId"] == vid and x.get("status") == "attended" for x in db["signups"]):
+                    raise ValueError("That shift is already checked in, so it can't be cancelled")
                 before = len(db["signups"])
                 db["signups"] = [x for x in db["signups"] if not (x["id"] == m.group(1) and x["volunteerId"] == vid)]
                 if len(db["signups"]) == before:
@@ -668,9 +774,12 @@ class Handler(BaseHTTPRequestHandler):
                 write_db(db)
                 return self.send_json({"temporaryPassword": temp})
             if method == "PATCH":
+                approved_now = False
                 if "status" in d:
                     if d["status"] not in VOL_STATUS:
                         raise ValueError("Unknown status")
+                    if d["status"] == "approved" and v["status"] != "approved":
+                        approved_now = True
                     v["status"] = d["status"]
                 if "hours" in d:
                     try:
@@ -678,8 +787,13 @@ class Handler(BaseHTTPRequestHandler):
                     except (TypeError, ValueError):
                         raise ValueError("Hours must be a number")
                 if "notes" in d: v["notes"] = s(d["notes"], 2000)
+                for k in ("emergencyName", "emergencyPhone", "phone"):
+                    if k in d: v[k] = s(d[k], 80)
                 write_db(db)
-                return self.send_json(public_volunteer(v))
+                if approved_now:  # email after saving so the log entry isn't overwritten
+                    notify([v["email"]], "You're approved to volunteer!", f"Hi {v['first']},\n\nGood news: you're approved! Log in to the volunteer portal to pick your shifts: {mailer.SITE}/portal.html\n\nProject Graduation",
+                           mailer.page("You're approved!", P(f"Hi {E(v['first'])}, good news: an organizer approved your volunteer account.") + P("Log in to the volunteer portal to pick your shifts and track your service hours."), ("Pick your shifts", mailer.SITE + "/portal.html#shifts")))
+                return self.send_json(public_volunteer(v, db))
             if method == "DELETE":
                 db["volunteers"].remove(v)
                 db["signups"] = [x for x in db["signups"] if x["volunteerId"] != vid]
@@ -687,6 +801,82 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"ok": True})
         return self.error("Not found", 404)
 
+
+    # --- attendance
+    def attendance(self, sid, d):
+        with lock:
+            db = read_db()
+            x = next((y for y in db["signups"] if y["id"] == sid), None)
+            if not x:
+                return self.error("Sign-up not found", 404)
+            ev = next((e for e in db["events"] if e["id"] == x["eventId"]), {})
+            if "status" in d:
+                if d["status"] not in SIGNUP_STATUS:
+                    raise ValueError("Unknown attendance status")
+                x["status"] = d["status"]
+                if d["status"] == "attended" and x.get("hours") in (None, ""):
+                    x["hours"] = shift_hours(ev, x["shift"])
+            if "hours" in d:
+                try:
+                    x["hours"] = max(0.0, min(24.0, round(float(d["hours"]) * 4) / 4))
+                except (TypeError, ValueError):
+                    raise ValueError("Hours must be a number")
+            write_db(db)
+            return self.send_json(x)
+
+    # --- meeting notices & announcements
+    def announce(self, d):
+        title, body = s(d.get("title"), 140), s(d.get("body"), 4000)
+        kind = "meeting" if d.get("kind") == "meeting" else "announcement"
+        if not title:
+            raise ValueError("Give it a title")
+        when, end, where = s(d.get("when"), 25), s(d.get("end"), 25), s(d.get("where"), 200)
+        if kind == "meeting":
+            if not valid_dt(when):
+                raise ValueError("Meetings need a date and time")
+            if end and (not valid_dt(end) or end <= when):
+                raise ValueError("End time must be after the start time")
+        auds = [a for a in d.get("audiences", []) if isinstance(a, str)][:20]
+        if not auds:
+            raise ValueError("Pick who should get it")
+        with lock:
+            db = read_db()
+            emails, vids = set(), set()
+            vols = {v["id"]: v for v in db["volunteers"]}
+            for a in auds:
+                if a == "volunteers:approved":
+                    sel = [v for v in vols.values() if v["status"] == "approved"]
+                elif a == "volunteers:pending":
+                    sel = [v for v in vols.values() if v["status"] == "pending"]
+                elif a.startswith("volunteers:event:"):
+                    ids = {x["volunteerId"] for x in db["signups"] if x["eventId"] == a.split(":", 2)[2] and x.get("status") != "no-show"}
+                    sel = [vols[i] for i in ids if i in vols]
+                elif a.startswith("registrants:event:"):
+                    emails |= {r["email"] for r in db["registrations"] if r["eventId"] == a.split(":", 2)[2]}
+                    sel = []
+                elif a == "sponsors:confirmed":
+                    emails |= {sp["email"] for sp in db["sponsors"] if sp["status"] == "confirmed"}
+                    sel = []
+                else:
+                    raise ValueError("Unknown audience")
+                for v in sel:
+                    vids.add(v["id"]); emails.add(v["email"])
+            if not emails:
+                raise ValueError("Nobody matches that audience yet")
+            rec = {"id": uuid.uuid4().hex[:10], "at": now_iso(), "kind": kind, "title": title, "body": body,
+                   "when": when if kind == "meeting" else "", "end": end if kind == "meeting" else "", "where": where,
+                   "audiences": auds, "volunteerIds": sorted(vids), "recipients": len(emails),
+                   "email": {"sent": 0, "failed": 0, "skipped": None if d.get("sendEmail", True) else "email turned off"}}
+            db["announcements"].append(rec)
+            write_db(db)
+        if d.get("sendEmail", True):
+            when_txt = f"{nice_dt(when)}" + (f" – {datetime.fromisoformat(end).strftime('%I:%M %p').lstrip('0')}" if end else "") if kind == "meeting" else ""
+            details = (P(f"<b>When:</b> {E(when_txt)}") if when_txt else "") + (P(f"<b>Where:</b> {E(where)}") if where else "")
+            text = (f"{title}\n\n" + (f"When: {when_txt}\n" if when_txt else "") + (f"Where: {where}\n" if where else "") + f"\n{body}\n\nProject Graduation")
+            notify(sorted(emails), ("Meeting: " if kind == "meeting" else "") + title, text,
+                   mailer.page(title, details + "".join(P(E(line)) for line in body.split("\n") if line.strip())),
+                   mailer.ics(rec["id"], title, when, end or None, where, body) if kind == "meeting" else None, ann_id=rec["id"], kind=kind)
+        self.send_json(rec, 201)
 
 if __name__ == "__main__":
     print("Project Graduation server")

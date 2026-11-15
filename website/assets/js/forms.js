@@ -100,6 +100,11 @@
       { id: "grade", type: "single", key: "grade", label: "Grade", required: true, when: student, q: `What ${hl("grade")} are you in?`, options: ["9", "10", "11", "12"] },
       { id: "guardian", type: "fields", label: "Guardian email", when: student, q: `A ${hl("parent or guardian's email")}?`, help: "We'll let them know you signed up. Required for students.",
         fields: [{ key: "guardianEmail", label: "Parent or guardian email", type: "email", required: true, placeholder: "parent@example.com" }] },
+      { id: "emergency", type: "fields", label: "Emergency contact", q: `Who should we call in an ${hl("emergency")}?`, help: "Only used if something happens during a shift.",
+        fields: [
+          { key: "emergencyName", label: "Name", required: true, placeholder: "Alex Rivera" },
+          { key: "emergencyPhone", label: "Phone", type: "tel", required: true, placeholder: "(555) 555-0199" },
+        ] },
       { id: "interests", type: "multi", key: "interests", label: "Interests", required: true, q: `What do you ${hl("like doing")}?`, help: "Pick as many as you like.",
         options: ["Setup & teardown", "Running a booth", "Food & concessions", "Tech & AV", "Decorating", "Check-in & greeting", "Photos & video", "Anything!"] },
       { id: "availability", type: "multi", key: "availability", label: "Availability", required: true, q: `When are you usually ${hl("free")}?`,

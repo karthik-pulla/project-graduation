@@ -38,12 +38,38 @@ The navbar, phone menu, and footer are shared across pages by `assets/js/nav.js`
 - **Events:** add, edit, or delete events. You set capacity, price, and which extra questions the sign-up form asks (team, T-shirt, group size). Events with the **Volunteer** type don't appear on the Events page; they show up as shifts in the volunteer portal (list the shifts one per line). "Signed up offline" counts people who registered on paper or by Venmo, so the spots-left number stays accurate.
 - **Registrations:** every sign-up, filterable by event and searchable, with CSV export
 - **Volunteers:** everyone who registered. Approve them (they can't book shifts until you do), log service hours, see and remove their shifts, keep notes, and **Reset password** to give someone a temporary password. CSV export.
+- **Attendance:** pick a volunteer event to see every shift's roster with phone and emergency contacts. Mark each person Booked, Attended, or No-show; attended shifts add their hours automatically (worked out from the shift times), and you can adjust the hours. Mark a whole shift attended at once, export a CSV, or message everyone on that event.
+- **Messages:** send meeting notices (with a calendar invite) or announcements to approved or pending volunteers, volunteers on a specific event, people registered for an event, or confirmed sponsors. Messages show up in the volunteer portal right away and are emailed too once email is connected. An email log shows every automatic and manual email and whether it went out.
 - **Event ideas:** every pitch from `pitch.html`. Set a status (New, Reviewing, Approved, Passed), keep notes, and use **Turn into event** to start an event pre-filled from the pitch. CSV export.
 - **Sponsors:** every application from `sponsor.html`. Set a status (New, Contacted, Confirmed, Declined), keep notes, and flip **Show on website** to put a confirmed sponsor's name in the home page sponsor grid. CSV export.
 
 Sponsor levels (Freshman $250 through Valedictorian $5,000+) are placeholders. Edit `TIERS` in `assets/js/forms.js`.
 
-Volunteer passwords are stored as salted PBKDF2 hashes and never sent to the admin console.
+Volunteer passwords are stored as salted PBKDF2 hashes and never sent to the admin console. A volunteer's total hours are their attended shifts plus any extra hours you add on their card.
+
+Each event can have an optional **payment link** (Zeffy, Givebutter, Stripe Payment Links…). People who register see a "Pay now" button, and the link is included in their confirmation email.
+
+## Email
+
+`mailer.py` sends email with any SMTP account, using only Python's standard library. Nothing is sent until you set it up; until then, messages still appear in the volunteer portal and the console's email log shows "not sent".
+
+```bash
+SMTP_HOST=smtp-relay.brevo.com SMTP_PORT=587 SMTP_USER=you@example.com SMTP_PASS=your-smtp-key \
+MAIL_FROM="Project Graduation <hello@yourdomain.org>" ADMIN_EMAIL=organizers@yourdomain.org \
+SITE_URL=https://yourdomain.org python3 server.py
+```
+
+Free options: **Brevo** (300 emails a day) or a **Gmail** account with an app password (`smtp.gmail.com`, about 500 a day). Each recipient gets their own copy, so addresses are never shared.
+
+Automatic emails:
+- Event registration confirmation, with a calendar invite and the payment link if there is one
+- Volunteer welcome; a notice to the student's parent or guardian; "you're approved"; shift confirmations with a calendar invite
+- Thank-you notes for sponsor applications and event pitches
+- New-application alerts to `ADMIN_EMAIL` (if set)
+
+## Legal pages
+
+`privacy.html`, `terms.html`, `cookies.html`, and `accessibility.html` are **templates**. Every yellow-highlighted `[bracket]` needs your organization's real details (legal name, address, tax status, payment provider, how long you keep data, state). They're written in plain English for a school-community nonprofit that collects data from students, but they aren't legal advice: have a parent, school administrator, or attorney review them before launch. Edit the text in `tools/3_legal_pages.py` and re-run it, or edit the HTML directly. The site uses no tracking cookies, so it doesn't need a cookie banner.
 
 ## Hosting
 

@@ -87,7 +87,8 @@
         <div><h4>Get involved</h4><ul><li><a href="volunteer.html">Volunteer</a></li><li><a href="portal.html">Volunteer portal</a></li><li><a href="pitch.html">Pitch an event</a></li><li><a href="sponsor.html">Sponsor</a></li><li><a href="index.html#donate">Donate</a></li></ul></div>
         <div><h4>Contact</h4><ul><li><a href="mailto:${contact}">${contact}</a></li><li><a href="${CFG.instagram || "https://instagram.com/"}" rel="noopener">Instagram</a></li></ul></div>
       </div>
-      <div class="fine"><span>© ${year} Project Graduation · Hillsborough High School</span><span class="mono">made with ♥ by the class of '${String(year).slice(2)} community</span></div>
+      <div class="fine"><span>© ${year} Project Graduation · Hillsborough High School</span>
+        <nav class="legal-links" aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="cookies.html">Cookies</a><a href="accessibility.html">Accessibility</a></nav></div>
     </div>
   </footer>`;
 

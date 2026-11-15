@@ -73,13 +73,14 @@
     let html = "";
     if (q.type === "intro") {
       const it = FORM.intro;
-      html = `<p class="eyebrow">// ${val(it.eyebrow)}</p><h1 class="flow-title">${val(it.title)}</h1><p class="flow-lede">${val(it.lede)}</p>
+      html = `<p class="eyebrow">${val(it.eyebrow)}</p><h1 class="flow-title">${val(it.title)}</h1><p class="flow-lede">${val(it.lede)}</p>
         <div class="flow-actions"><button class="btn btn-maroon" type="submit">${it.cta || "Let's go"} <span class="arrow">→</span></button><span class="flow-hint">press <kbd>Enter ↵</kbd></span></div>
         ${it.footnote ? `<p class="flow-foot">${val(it.footnote)}</p>` : ""}`;
     } else if (q.type === "review") {
       const rows = asks().filter((x) => x.review !== false).map((x) => [x.label || x.id, reviewValue(x), x.id]);
-      html = `<p class="eyebrow">// last step</p><h2 class="flow-q">Look good${A.first ? ", " + esc(A.first) : ""}? <span class="hl">Review and send.</span></h2>
+      html = `<p class="eyebrow">last step</p><h2 class="flow-q">Look good${A.first ? ", " + esc(A.first) : ""}? <span class="hl">Review and send.</span></h2>
         <dl class="review">${rows.map(([k, v, id]) => `<div><dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="muted">—</span>'}</dd><button type="button" class="link-arrow" data-jump="${id}">Edit</button></div>`).join("")}</dl>
+        <p class="flow-consent">By sending this, you agree to our <a href="privacy.html" target="_blank">privacy policy</a> and <a href="terms.html" target="_blank">terms</a>.</p>
         <p class="flow-error" role="alert"></p>
         <div class="flow-actions"><button class="btn btn-maroon" type="submit">${FORM.submitLabel || "Send"} <span class="arrow">→</span></button></div>`;
     } else if (q.type === "done") {

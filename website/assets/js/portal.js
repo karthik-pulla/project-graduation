@@ -53,7 +53,7 @@
   }
 
   /* ---------- views ---------- */
-  const head = (eyebrow, title, actions = "") => `<header class="pane-head"><div><p class="eyebrow">// ${eyebrow}</p><h1>${title}</h1></div><div class="pane-actions">${actions}</div></header>`;
+  const head = (eyebrow, title, actions = "") => `<header class="pane-head"><div><p class="eyebrow">${eyebrow}</p><h1>${title}</h1></div><div class="pane-actions">${actions}</div></header>`;
   const upcoming = () => D.signups.filter((s) => new Date(s.end) > new Date()).sort((a, b) => new Date(a.start) - new Date(b.start));
   const past = () => D.signups.filter((s) => new Date(s.end) <= new Date());
 
@@ -69,17 +69,40 @@
     const up = upcoming();
     return head("volunteer portal", `Hi, ${esc(D.me.first)}! <span class="hl on">Thanks for helping.</span>`) + statusBanner() + `
       <div class="kpis three">
-        <div class="kpi"><span>Service hours</span><b>${D.me.hours || 0}</b><small>logged by organizers</small></div>
+        <div class="kpi"><span>Service hours</span><b>${D.me.totalHours ?? D.me.hours ?? 0}</b><small>from attended shifts + extras</small></div>
         <div class="kpi"><span>Upcoming shifts</span><b>${up.length}</b><small>${up[0] ? "next: " + esc(up[0].title) : "none booked yet"}</small></div>
         <a class="kpi" href="#shifts"><span>Open opportunities</span><b>${D.opportunities.length}</b><small>browse and book →</small></a>
       </div>
       <section class="card"><h2>Your upcoming shifts</h2>
         ${up.length ? up.map((s) => `<div class="shift-row"><div class="mini-cal"><b>${new Date(s.start).getDate()}</b><span>${new Date(s.start).toLocaleDateString("en-US", { month: "short" })}</span></div>
           <div class="grow"><b>${esc(s.title)}</b><small>${dayLong(s.start)} · ${esc(s.shift)} · ${esc(s.location)}</small></div>
-          <button class="btn btn-sm btn-ghost" data-cancel="${s.id}">Cancel</button></div>`).join("")
+          ${s.status === "attended" ? `<span class="att-badge attended">${s.hours ?? 0} hrs</span>` : `<button class="btn btn-sm btn-ghost" data-cancel="${s.id}">Cancel</button>`}</div>`).join("")
         : `<p class="empty-note">No shifts yet. ${D.me.status === "approved" ? '<a class="link-arrow" href="#shifts">Find one →</a>' : "Once you're approved, you can book shifts here."}</p>`}
       </section>
-      ${past().length ? `<section class="card"><h2>Past shifts</h2>${past().map((s) => `<div class="shift-row past"><div class="grow"><b>${esc(s.title)}</b><small>${dayLong(s.start)} · ${esc(s.shift)}</small></div></div>`).join("")}</section>` : ""}`;
+      ${messagesCard()}
+      ${past().length || D.me.hours || D.signups.some((x) => x.status === "attended") ? `<section class="card"><h2>Hours log</h2>${past().concat(D.signups.filter((s) => s.status === "attended" && new Date(s.end) > new Date())).map((s) => `<div class="shift-row past-log"><div class="grow"><b>${esc(s.title)}</b><small>${dayLong(s.start)} · ${esc(s.shift)}</small></div>
+          <span class="att-badge ${s.status || "booked"}">${s.status === "attended" ? `${s.hours ?? 0} hrs` : s.status === "no-show" ? "missed" : "awaiting check-in"}</span></div>`).join("")}
+          ${D.me.hours ? `<div class="shift-row past-log"><div class="grow"><b>Extra hours</b><small>added by an organizer</small></div><span class="att-badge attended">${D.me.hours} hrs</span></div>` : ""}</section>` : ""}`;
+  }
+
+  // meeting notices and announcements from organizers
+  function messagesCard() {
+    const msgs = D.messages || [];
+    if (!msgs.length) return "";
+    return `<section class="card"><h2>Messages from organizers</h2>${msgs.slice(0, 6).map((m) => `
+      <article class="msg-card"><h3>${m.kind === "meeting" ? "📅 " : "📣 "}${esc(m.title)}</h3>
+        <p class="meta">${m.when ? `${dayLong(m.when)} · ${time(m.when)}${m.end ? "–" + time(m.end) : ""}` : new Date(m.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${m.where ? ` · ${linkify(m.where)}` : ""}</p>
+        ${m.body ? `<p class="body">${esc(m.body)}</p>` : ""}
+        ${m.when ? `<a class="btn btn-sm btn-ghost" download="meeting.ics" href="${icsHref(m)}">Add to calendar</a>` : ""}
+      </article>`).join("")}</section>`;
+  }
+  const linkify = (t) => /^https?:\/\/\S+$/.test(t) ? `<a href="${esc(t)}" target="_blank" rel="noopener">${esc(t)}</a>` : esc(t);
+  function icsHref(m) {
+    const f = (d) => d.replace(/[-:]/g, "").slice(0, 15);
+    const end = m.end || new Date(new Date(m.when).getTime() + 3600e3 - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 19);
+    const e = (t) => (t || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Project Graduation//EN", "BEGIN:VEVENT", `UID:${m.id}@projectgrad`, `DTSTART:${f(m.when)}`, `DTEND:${f(end)}`, `SUMMARY:${e(m.title)}`, `LOCATION:${e(m.where)}`, `DESCRIPTION:${e(m.body)}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
   }
 
   function shifts() {
