@@ -19,45 +19,31 @@
   const rotPts = (pts, deg, cx, cy) => { const r = (deg * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r); return pts.map(([x, y]) => [cx + (x - cx) * c - (y - cy) * s, cy + (x - cx) * s + (y - cy) * c]); };
   const poly = (pts) => pts.map((p) => p.map((v) => v.toFixed(1)).join(",")).join(" ");
 
-  function hull(pts) {
-    const p = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-    const lo = [], up = [];
-    for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
-    for (const q of p.reverse()) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
-    return lo.slice(0, -1).concat(up.slice(0, -1)); // counter-clockwise (y-down: clockwise on screen)
+  // Scissor cut: a handful of long straight cuts around the art.
+  // Each cut is a line pushed out past the art's furthest point in that
+  // direction, so the border never clips the art. Uneven angles and distances
+  // keep it hand-made; the three wobble frames only nudge the same cuts.
+  function scissorCut(pts, seed, variant, { border = 24, jit = 10, cuts = 8 } = {}) {
+    const R = rng(seed), V = rng(seed * 7 + variant * 131);
+    const k = cuts + Math.floor(R() * 2);                           // 8 or 9 cuts
+    const gaps = Array.from({ length: k }, () => 0.7 + R() * 0.6);  // uneven spacing
+    const total = gaps.reduce((x, y) => x + y, 0);
+    let ang = R() * Math.PI * 2;
+    const lines = gaps.map((g) => {
+      const t = ang + (V() - 0.5) * 0.06;                           // per-frame nudge (about ±2°)
+      ang += (g / total) * Math.PI * 2;
+      const nx = Math.cos(t), ny = Math.sin(t);
+      let far = -Infinity; for (const [x, y] of pts) far = Math.max(far, x * nx + y * ny);
+      return { nx, ny, d: far + border + R() * jit + V() * 3 };
+    });
+    const corners = lines.map((L1, i) => {
+      const L2 = lines[(i + 1) % lines.length];
+      const det = L1.nx * L2.ny - L1.ny * L2.nx;
+      return [(L1.d * L2.ny - L2.d * L1.ny) / det, (L1.nx * L2.d - L2.nx * L1.d) / det];
+    });
+    return corners;
   }
-
-  // irregular scissor cut around a point cloud
-  function jaggedCut(pts, seed, { border = 14, jit = 10, seg = 46 } = {}) {
-    const R = rng(seed);
-    const h = hull(pts), n = h.length;
-    const norm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
-    const out = (a, b) => { const [tx, ty] = norm(b[0] - a[0], b[1] - a[1]); return [ty, -tx]; }; // outward for this winding
-    // offset hull outward
-    const off = h.map((p, i) => {
-      const a = out(h[(i - 1 + n) % n], p), b = out(p, h[(i + 1) % n]);
-      const [nx, ny] = norm(a[0] + b[0], a[1] + b[1]);
-      return [p[0] + nx * border, p[1] + ny * border];
-    });
-    // subdivide long edges at uneven spots
-    const verts = [];
-    off.forEach((a, i) => {
-      const b = off[(i + 1) % off.length]; verts.push(a);
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const k = Math.floor(L / seg);
-      const ts = Array.from({ length: k }, () => 0.08 + R() * 0.84).sort();
-      ts.forEach((t) => verts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]));
-    });
-    // shove every vertex outward by a random amount (never inward)
-    const m = verts.length;
-    const res = verts.map((p, i) => {
-      const prev = verts[(i - 1 + m) % m], next = verts[(i + 1) % m];
-      const [tx, ty] = norm(next[0] - prev[0], next[1] - prev[1]);
-      const d = R() * jit, s = (R() - 0.5) * jit * 0.7;
-      return [p[0] + ty * d + tx * s, p[1] - tx * d + ty * s];
-    });
-    return "M" + res.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join("L") + "Z";
-  }
+  const pathOf = (c) => "M" + c.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join("L") + "Z";
 
   // ---------- sticker art ----------
   const HT = 'fill="url(#pg-ht)"', HTW = 'fill="url(#pg-htw)"';
@@ -201,11 +187,11 @@
     const def = LIB[name]; if (!def) return "";
     const { pts, art } = def(opts);
     const seed = hash(name + (opts.text || ""));
-    const cutOpts = { border: opts.border || 14, jit: opts.jit || 11, seg: opts.seg || 44 };
-    const cuts = [1, 2, 3].map((v) => `<path class="cv cv${v}" d="${jaggedCut(pts, seed + v * 101, cutOpts)}" fill="#fff"/>`).join("");
-    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-    const pad = cutOpts.border + cutOpts.jit + 6;
-    const x0 = Math.min(...xs) - pad, y0 = Math.min(...ys) - pad, w = Math.max(...xs) - Math.min(...xs) + pad * 2, h = Math.max(...ys) - Math.min(...ys) + pad * 2;
+    const cutOpts = { border: opts.border || 24, jit: opts.jit || 10, cuts: opts.cuts || 8 };
+    const frames = [1, 2, 3].map((v) => scissorCut(pts, seed, v, cutOpts));
+    const cuts = frames.map((c, i) => `<path class="cv cv${i + 1}" d="${pathOf(c)}" fill="#fff"/>`).join("");
+    const all = frames.flat(), xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+    const x0 = Math.min(...xs) - 4, y0 = Math.min(...ys) - 4, w = Math.max(...xs) - x0 + 4, h = Math.max(...ys) - y0 + 4;
     return `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${w.toFixed(0)} ${h.toFixed(0)}" aria-hidden="true">${cuts}${art}</svg>`;
   }
 

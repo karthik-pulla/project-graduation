@@ -46,7 +46,7 @@ On static-only hosting (GitHub Pages, Netlify), the public pages still load from
 
 ## Stickers
 
-`assets/js/stickers.js` draws the cut-paper stickers. Each one gets an irregular, hand-scissored white border, and three different cuts swap frame by frame for the stop-motion wobble.
+`assets/js/stickers.js` draws the cut-paper stickers. Each one gets a white border made of 8–10 long, uneven straight cuts with generous white space, like a sticker cut by hand with scissors. Three slightly nudged versions of the cut swap frame by frame for the stop-motion wobble.
 
 ```html
 <div class="sticker-wrap" data-sticker="burst" style="left:10%; top:40px; width:100px; --r:-8deg"></div>
