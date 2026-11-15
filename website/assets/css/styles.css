@@ -175,30 +175,34 @@ button { font: inherit; color: inherit; }
 .ship { position: relative; display: block; }
 .ship img { width: 32px; height: auto; position: relative; z-index: 1; transition: transform .25s; }
 .brand:hover .ship img { transform: scale(1.06); }
-/* flame sits under the hat and points straight down */
-.flame { position: absolute; z-index: 0; left: 54%; top: 78%; width: 13px; transform-origin: 50% 0; transform: translateX(-50%) scaleY(0); opacity: 0; }
-.flame svg { width: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 4px rgba(255,170,60,.7)); transform: rotate(180deg); }
-.flame .f1 { fill: #c1272d; stroke: #fff; stroke-width: 2.4px; paint-order: stroke; }
-.flame .f2 { fill: #f2a43a; }
-.flame .f3 { fill: #fff5d6; }
-.smoke { position: absolute; left: 54%; bottom: -8px; width: 0; height: 0; z-index: 0; }
+/* fireball grows from under the upright cap (see launch pose) */
+.flame { position: absolute; z-index: 0; left: 50%; top: 52%; width: 20px; transform-origin: 50% 0; transform: translateX(-50%) scale(0); opacity: 0; }
+.flame svg { width: 100%; display: block; overflow: visible; filter: drop-shadow(0 0 6px rgba(245,120,40,.55)); }
+.flame .f1 { fill: #ef5a2f; }
+.flame .f2 { fill: #f5b942; }
+.flame .f3 { fill: #fbf7a0; }
+.flame .f4 { fill: #fff; }
+.smoke { position: absolute; left: 50%; bottom: -16px; width: 0; height: 0; z-index: 0; }
 .smoke i { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink); left: -6px; top: -6px; transform: scale(0); opacity: 0; }
 
 .brand.launch .ship   { animation: rocket-shake 1.9s both; }
 .brand.launch .rocket { animation: rocket-fly 1.9s both; }
 .brand.launch .flame  { animation: rocket-flame 1.9s both; }
-.brand.launch .flame .f2, .brand.launch .flame .f3 { animation: flicker .14s steps(2) infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.brand.launch .flame .f1, .brand.launch .flame .f2, .brand.launch .flame .f3 { animation: flicker .16s steps(2) infinite; transform-box: fill-box; transform-origin: 50% 0; }
+.brand.launch .flame .f2 { animation-delay: -.08s; }
 .brand.launch .smoke i { animation: puff 1.9s both; }
 .brand.launch .smoke i:nth-child(1) { --dx: -16px; --dy: 4px;  animation-delay: .05s; }
 .brand.launch .smoke i:nth-child(2) { --dx: 15px;  --dy: 3px;  animation-delay: .12s; }
 .brand.launch .smoke i:nth-child(3) { --dx: -6px;  --dy: 9px;  animation-delay: .2s; }
 .brand.launch .smoke i:nth-child(4) { --dx: 7px;   --dy: 10px; animation-delay: .28s; }
-@keyframes rocket-shake {
-  0%, 10% { transform: none; }
-  14% { transform: translate(-1px, 0) rotate(-2deg); } 18% { transform: translate(1px, 1px) rotate(2deg); }
-  22% { transform: translate(-1px, -1px) rotate(-1.5deg); } 26% { transform: translate(1.5px, 0) rotate(2deg); }
-  30% { transform: translate(-1.5px, 1px) rotate(-2deg); } 34% { transform: translate(1px, -1px) rotate(1deg); }
-  38%, 100% { transform: none; }
+@keyframes rocket-shake { /* swing upright (board on top), rumble, fly, then settle back */
+  0% { transform: rotate(0); }
+  12% { transform: rotate(-28deg); }
+  16% { transform: rotate(-28deg) translate(-1px, 0); } 20% { transform: rotate(-28deg) translate(1px, 1px); }
+  24% { transform: rotate(-28deg) translate(-1px, -1px); } 28% { transform: rotate(-28deg) translate(1.5px, 0); }
+  32% { transform: rotate(-28deg) translate(-1.5px, 1px); } 36% { transform: rotate(-28deg) translate(1px, -1px); }
+  40%, 62% { transform: rotate(-28deg); }
+  63%, 100% { transform: rotate(0); }
 }
 @keyframes rocket-fly {
   0%, 38% { transform: translateY(0); opacity: 1; animation-timing-function: cubic-bezier(.55, 0, .9, .35); }
@@ -208,14 +212,14 @@ button { font: inherit; color: inherit; }
   100% { transform: translateY(0); opacity: 1; }
 }
 @keyframes rocket-flame {
-  0%, 8% { transform: translateX(-50%) scaleY(0); opacity: 0; }
-  14% { transform: translateX(-50%) scaleY(.45); opacity: 1; }
-  34% { transform: translateX(-50%) scaleY(.8); opacity: 1; }
-  42% { transform: translateX(-50%) scale(1.15, 1.5); opacity: 1; }
-  62% { transform: translateX(-50%) scale(1.1, 1.7); opacity: 1; }
-  63%, 100% { transform: translateX(-50%) scaleY(0); opacity: 0; }
+  0%, 10% { transform: translateX(-50%) scale(0); opacity: 0; }
+  16% { transform: translateX(-50%) scale(.45); opacity: 1; }
+  34% { transform: translateX(-50%) scale(.75); opacity: 1; }
+  42% { transform: translateX(-50%) scale(1.05, 1.25); opacity: 1; }
+  62% { transform: translateX(-50%) scale(1.1, 1.45); opacity: 1; }
+  63%, 100% { transform: translateX(-50%) scale(0); opacity: 0; }
 }
-@keyframes flicker { 50% { transform: scale(.9, 1.1); } }
+@keyframes flicker { 50% { transform: scale(.94, 1.08); } }
 @keyframes puff {
   0%, 18% { transform: translate(0, 0) scale(0); opacity: 0; }
   30% { opacity: 1; transform: translate(calc(var(--dx) * .5), var(--dy)) scale(1); }

@@ -12,10 +12,10 @@
 
   const ROCKET = `<span class="logo-pad" aria-hidden="true">
       <span class="smoke"><i></i><i></i><i></i><i></i></span>
-      <span class="rocket"><span class="ship">
-        <span class="flame"><svg viewBox="0 0 30 56"><path class="f1" d="M15 56C6 44 1 33 4 21 6 13 11 7 15 0c4 7 9 13 11 21 3 12-2 23-11 35z"/><path class="f2" d="M15 50C9 41 6 33 8 24c1-6 4-10 7-15 3 5 6 9 7 15 2 9-1 17-7 26z"/><path class="f3" d="M15 42c-3-6-5-11-4-17 1-3 2-6 4-9 2 3 3 6 4 9 1 6-1 11-4 17z"/></svg></span>
-        <img src="assets/mark-white.png" alt="">
-      </span></span>
+      <span class="rocket">
+        <span class="flame"><svg viewBox="0 0 60 80"><path class="f1" d="M30 2C46 2 58 14 58 30c0 12-6 20-12 26 2-6 1-10-2-12 0 10-6 18-10 34-4-8-12-16-14-22-2 4-4 6-8 6 2-4 2-8-2-12C4 44 2 38 2 30 2 14 14 2 30 2z"/><path class="f2" d="M30 10c12 0 20 10 19 21-1 9-7 15-13 21 1-6 0-9-3-11 0 7-3 13-5 21-3-7-6-12-8-17-7-5-9-11-9-16 0-11 8-19 19-19z"/><path class="f3" d="M30 16c8 0 13 7 12 14-1 6-6 10-10 14 0-5-1-7-3-9-3 3-6 2-9-2-3-5-2-11 2-14 2-2 5-3 8-3z"/><circle class="f4" cx="30" cy="22" r="5"/></svg></span>
+        <span class="ship"><img src="assets/mark-white.png" alt=""></span>
+      </span>
     </span>`;
   const BRAND = (home = "index.html") => `<a class="brand" href="${home}" aria-label="Project Graduation home">${ROCKET}<span class="brand-name">Project <b>Graduation</b></span></a>`;
 
